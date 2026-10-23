@@ -1,7 +1,8 @@
 # ผลตรวจ Android v0.3.0 — จักรยานปั่นไฟ
 
 - PASS: unit tests 19 ข้อ และ browser tests 22 กรณี รวมปั่นไฟตอนกลางคืน ยอดขาย/หน่วยพลังงาน cooldown เซฟเก่า บัญชีรายวัน และ reduced motion
-- Native smoke test ของรุ่นนี้รอตรวจใน GitHub Actions โดยเพิ่มการแตะจักรยานจริงและยืนยันรายได้ในเซฟ
+- PASS: native smoke test รุ่น 0.3.0 บน Android 15 / x86_64 + KVM ใน GitHub Actions รวม 11 checkpoints: เพิ่มการแตะจักรยานด้วย touchscreen event จริงและยืนยันรายได้ในเซฟ ก่อนตรวจธุรกรรม โหลดเซฟกลับ และ file pickers ตามเดิม ดู [รอบที่ผ่าน](https://github.com/coolza254-lgtm/Denki-Factory/actions/runs/40004994354)
+- PASS: สร้าง APK, ตรวจ signature/alignment และ certificate ตรงกับ 0.2.0; ดาวน์โหลดกลับจาก GitHub แล้วตรวจ SHA-256 ตรงกับไฟล์ที่ลงนาม
 - UNRUN: Galaxy A54 จริง และการส่งออก/นำเข้าเนื้อหาไฟล์ผ่าน Android DocumentsUI จนจบ
 
 # ผลตรวจ Android v0.2.0 — อนิเมชัน

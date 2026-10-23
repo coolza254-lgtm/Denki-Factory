@@ -6,7 +6,7 @@
 
 มีทั้งเว็บแอป/PWA และ APK ที่รวมไฟล์เกมไว้ในตัว ไม่มีโฆษณาหรือการซื้อในเกม ยังไม่ได้เผยแพร่ผ่าน Play Store รองรับการติดตั้งทับ 0.1.0/0.2.0 ด้วยกุญแจเดิมเพื่อเก็บเซฟไว้
 
-ผ่าน unit tests 19 ข้อ และ browser tests 22 กรณีแล้ว (native smoke test รุ่น 0.2.0 ผ่านบน Android 15; รุ่น 0.3.0 ตรวจแยกใน docs/ANDROID-VALIDATION.md) แต่ยังไม่ได้ทดสอบเล่นบน Galaxy A54 จริง ดู [ผลตรวจที่แยกผ่าน/ยังไม่ได้ทดสอบ](docs/ANDROID-VALIDATION.md)
+ผ่าน unit tests 19 ข้อ, browser tests 22 กรณี และ native smoke test รุ่น 0.3.0 บน Android 15 แล้ว แต่ยังไม่ได้ทดสอบเล่นบน Galaxy A54 จริง ดู [ผลตรวจที่แยกผ่าน/ยังไม่ได้ทดสอบ](docs/ANDROID-VALIDATION.md)
 
 ## เริ่มพัฒนา
 
