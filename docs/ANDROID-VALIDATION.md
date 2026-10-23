@@ -1,7 +1,7 @@
 # ผลตรวจ Android v0.4.0 — อัปเดตในเกม
 
 - PASS: unit tests 19 ข้อ และ browser tests 28 กรณี รวมเริ่มเช็กด้วยการกดเอง progress ดาวน์โหลด การส่งต่อให้ Android สิทธิ์ติดตั้ง เน็ตขาด รุ่นล่าสุด และกลับเข้าเมนู
-- Native checks รอตรวจบน GitHub: metadata/HTTPS allowlist, APK จริงที่ลงนามด้วยกุญแจถูก/ผิด, checksum และ version, provider แบบอ่านอย่างเดียว, ขอสิทธิ์และเปิด/ยกเลิก Package Installer
+- PASS: native checks บน Android 15/KVM: metadata/HTTPS allowlist, APK จริงที่ลงนามด้วยกุญแจถูก/ผิด, checksum และ version, provider แบบอ่านอย่างเดียว, ขอสิทธิ์และเปิด/ยกเลิก Package Installer โดยเซฟยังอยู่ ดู [รอบที่ผ่าน](https://github.com/coolza254-lgtm/Denki-Factory/actions/runs/40009502833)
 - หลัง publish จะรัน native check ที่อ่าน metadata จาก GitHub จริงเพิ่มเติม
 - UNRUN: การยืนยันติดตั้งแทนแอปจนจบ (ทดสอบเปิด/ยกเลิกตัวติดตั้ง) และ Galaxy A54 จริง
 
