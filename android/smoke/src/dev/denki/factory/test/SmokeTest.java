@@ -99,7 +99,11 @@ public final class SmokeTest extends Instrumentation {
             js("document.querySelector('.dialog .btn.primary').click()");
             waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).holdings.SURY.qty===10");
             passed("stock trade changes and saves game state");
-            js("location.reload()");waitFor("!!document.querySelector('.bottom-nav')");
+            // A reload request can return while the previous DOM still exists.
+            // Require a new window before checking persistence or navigating.
+            js("window.__denkiSmokeBeforeReload=true");
+            runOnMainSync(() -> web.reload());
+            waitFor("!window.__denkiSmokeBeforeReload && document.readyState==='complete' && !!document.querySelector('.bottom-nav')");
             waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).holdings.SURY.qty===10");
             passed("saved progress survives WebView reload");
             js("document.querySelector('[aria-label=ตั้งค่า]').click()");
