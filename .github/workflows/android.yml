@@ -16,7 +16,8 @@ permissions:
   contents: read
 jobs:
   android:
-    runs-on: ubuntu-latest
+    # Keep the Android SDK/KVM image stable when ubuntu-latest migrates.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Use disposable signing material for tests only
@@ -34,8 +35,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Install required components using the runner's Android SDK
+        shell: bash
+        run: |
+          sdk_root="${ANDROID_HOME:?Hosted runner Android SDK is missing}"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "$sdk_root/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
+          "$sdk_root/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
       - run: npm ci
       - run: npm run build:apk
       - name: Allow the disposable runner to use KVM
@@ -53,3 +60,14 @@ jobs:
         with:
           name: android-smoke-result
           path: android/build/smoke/result.txt
+      - name: Summarize native test results
+        if: always()
+        run: |
+          if [ -f android/build/smoke/result.txt ]; then
+            {
+              echo '### Android instrumentation result'
+              echo '```text'
+              tail -n 100 android/build/smoke/result.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
