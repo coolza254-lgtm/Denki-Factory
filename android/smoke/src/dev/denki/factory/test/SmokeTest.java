@@ -30,14 +30,32 @@ public final class SmokeTest extends Instrumentation {
     }
     private void waitSystem(ActivityMonitor monitor,String packagePart) throws Exception {
         long end=SystemClock.uptimeMillis()+20000;
+        String lastPackage="none";
         while(SystemClock.uptimeMillis()<end) {
             AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
             boolean found=root!=null && root.getPackageName()!=null && root.getPackageName().toString().contains(packagePart);
+            if(root!=null && root.getPackageName()!=null)lastPackage=root.getPackageName().toString();
             if(root!=null)root.recycle();
             if(found && (monitor==null || monitor.getHits()>0))return;
             Thread.sleep(100);
         }
-        throw new AssertionError("System screen not visible: "+packagePart);
+        throw new AssertionError("System screen not visible: "+packagePart+"; active="+lastPackage);
+    }
+    private void cancelInstaller() throws Exception {
+        AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+        boolean clicked=false;
+        if(root!=null) {
+            for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText("Cancel")) {
+                CharSequence text=node.getText();
+                if(text!=null && "cancel".equalsIgnoreCase(text.toString().trim()) && node.isVisibleToUser()) {
+                    clicked=node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    if(!clicked) { AccessibilityNodeInfo parent=node.getParent();if(parent!=null){clicked=parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);parent.recycle();} }
+                }
+                node.recycle();if(clicked)break;
+            }
+            root.recycle();
+        }
+        if(!clicked)throw new AssertionError("Android installer Cancel button was not available");
     }
     private void fireClick(String text) {
         runOnMainSync(() -> web.evaluateJavascript("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).click()",null));
@@ -194,7 +212,7 @@ public final class SmokeTest extends Instrumentation {
             installerFilter.addDataScheme("content");installerFilter.addDataType("application/vnd.android.package-archive");
             ActivityMonitor installer=addMonitor(installerFilter,null,false);
             fireClick("ติดตั้งอัปเดต");waitSystem(installer,"packageinstaller");removeMonitor(installer);
-            shell("input keyevent 4");waitSystem(null,"dev.denki.factory");
+            cancelInstaller();waitSystem(null,"dev.denki.factory");
             waitFor("JSON.parse(window.DenkiAndroid.getUpdateState()).status==='ready'");
             waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).holdings.SURY.qty===10");
             passed("Android installer opens a signed update and cancellation preserves progress");
