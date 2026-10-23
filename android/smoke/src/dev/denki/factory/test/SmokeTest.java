@@ -4,10 +4,10 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Rect;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import org.json.JSONObject;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -58,26 +58,14 @@ public final class SmokeTest extends Instrumentation {
     }
     private void touchText(String text) throws Exception {
         js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'})");
-        // Use actual screen bounds exposed by WebView accessibility. CSS pixel
-        // conversion can double-count Android insets and miss a short button.
-        Rect bounds=null;
-        long deadline=SystemClock.uptimeMillis()+15000;
-        while(bounds==null && SystemClock.uptimeMillis()<deadline) {
-            AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
-            if(root!=null) {
-                for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText(text)) {
-                    CharSequence label=node.getText()!=null ? node.getText() : node.getContentDescription();
-                    Rect candidate=new Rect();node.getBoundsInScreen(candidate);
-                    if(node.isVisibleToUser() && label!=null && label.toString().trim().equals(text)
-                        && !candidate.isEmpty()) bounds=candidate;
-                    node.recycle();
-                }
-                root.recycle();
-            }
-            if(bounds==null) Thread.sleep(100);
-        }
-        if(bounds==null) throw new AssertionError("Visible native button not found: "+text);
-        float x=bounds.exactCenterX(),y=bounds.exactCenterY();
+        JSONObject rect = new JSONObject(js("(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"'));const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2,width:innerWidth};})()"));
+        int[] geometry=new int[3];
+        runOnMainSync(() -> { web.getLocationOnScreen(geometry);geometry[2]=web.getWidth(); });
+        // WebView CSS coordinates map from its screen origin. Adding the View's
+        // padding again moves the touch below the button on edge-to-edge APIs.
+        float scale=(float)(geometry[2]/rect.getDouble("width"));
+        float x=(float)rect.getDouble("x")*scale+geometry[0];
+        float y=(float)rect.getDouble("y")*scale+geometry[1];
         long now=SystemClock.uptimeMillis();
         MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,x,y,0);
         MotionEvent up=MotionEvent.obtain(now,now+60,MotionEvent.ACTION_UP,x,y,0);
