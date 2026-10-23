@@ -50,8 +50,11 @@ public final class SmokeTest extends Instrumentation {
         return result.get();
     }
     private void waitFor(String script) throws Exception {
-        long deadline=System.currentTimeMillis()+120000;
-        while(System.currentTimeMillis()<deadline){if("true".equals(js(script)))return;Thread.sleep(1000);}
+        waitFor(script,120000);
+    }
+    private void waitFor(String script,long timeout) throws Exception {
+        long deadline=SystemClock.uptimeMillis()+timeout;
+        while(SystemClock.uptimeMillis()<deadline){if("true".equals(js(script)))return;Thread.sleep(1000);}
         throw new AssertionError("Not ready: "+script);
     }
     private void passed(String label) { report.append("PASS ").append(label).append('\n'); }
@@ -120,9 +123,11 @@ public final class SmokeTest extends Instrumentation {
             waitFor("!!document.querySelector('.bottom-nav')");
             passed("start company and render game");
             touchText("แตะปั่นไฟ");
-            if(!"true".equals(js("!!window.__denkiPointer?.trusted && window.__denkiPointer.text.includes('แตะปั่นไฟ')")))throw new AssertionError("Bike tap missed: "+js("JSON.stringify(window.__denkiPointer)"));
-            if(!"true".equals(js("Number.isFinite(JSON.parse(localStorage.getItem('denki.factory.v1')).pedalLastAt)")))throw new AssertionError("Bike tap did not commit: "+js("JSON.stringify({events:window.__denkiInput,toast:document.querySelector('.toast')?.textContent,state:JSON.parse(localStorage.getItem('denki.factory.v1')),now:Date.now()})"));
-            waitFor("(()=>{const s=JSON.parse(localStorage.getItem('denki.factory.v1'));return Number.isFinite(s.pedalLastAt) && s.cash>0;})()");
+            try {
+                waitFor("(()=>{const s=JSON.parse(localStorage.getItem('denki.factory.v1'));return !!window.__denkiPointer?.trusted && window.__denkiPointer.text.includes('แตะปั่นไฟ') && Number.isFinite(s.pedalLastAt) && s.cash>0;})()",5000);
+            } catch(Exception | AssertionError error) {
+                throw new AssertionError("Bike tap did not commit: "+js("JSON.stringify({events:window.__denkiInput,toast:document.querySelector('.toast')?.textContent,state:JSON.parse(localStorage.getItem('denki.factory.v1')),now:Date.now()})"));
+            }
             passed("touchscreen pedaling earns and saves electricity sales");
             js("document.querySelectorAll('.bottom-nav button')[1].click()");
             waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('ดูแลเงิน')");
