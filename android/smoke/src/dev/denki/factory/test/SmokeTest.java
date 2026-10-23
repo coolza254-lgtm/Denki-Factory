@@ -51,10 +51,12 @@ public final class SmokeTest extends Instrumentation {
                 String pkg=String.valueOf(root.getPackageName());last=pkg;
                 if(clicked && pkg.equals("dev.denki.factory")) { root.recycle();return; }
                 boolean confirmation=false;
-                for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText("Install")) {
-                    CharSequence text=node.getText();
-                    if(text!=null && "install".equalsIgnoreCase(text.toString().trim()) && node.isVisibleToUser() && node.isEnabled())confirmation=true;
-                    node.recycle();
+                for(String label:new String[]{"Install","Update"}) {
+                    for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText(label)) {
+                        CharSequence text=node.getText();
+                        if(text!=null && label.equalsIgnoreCase(text.toString().trim()) && node.isVisibleToUser() && node.isEnabled())confirmation=true;
+                        node.recycle();
+                    }
                 }
                 if(pkg.contains("packageinstaller") && confirmation) {
                     for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText("Cancel")) {
