@@ -23,7 +23,7 @@ public final class SmokeTest extends Instrumentation {
         AtomicReference<String> result = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
         runOnMainSync(() -> web.evaluateJavascript(script, value -> { result.set(value); done.countDown(); }));
-        if (!done.await(120, TimeUnit.SECONDS)) throw new AssertionError("JavaScript response timed out");
+        if (!done.await(30, TimeUnit.SECONDS)) throw new AssertionError("JavaScript response timed out: "+script);
         return result.get();
     }
     private void waitFor(String script) throws Exception {
@@ -56,7 +56,10 @@ public final class SmokeTest extends Instrumentation {
             runOnMainSync(() -> web=(WebView)((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0));
             waitFor("!!document.querySelector('.welcome .btn.primary')");
             passed("embedded HTML/JS/CSS loads without Internet permission");
-            if(!"true".equals(js("!!window.DenkiAndroid && !navigator.serviceWorker.controller")))throw new AssertionError("Native bridge or worker mode incorrect");
+            if(!"true".equals(js("!!window.DenkiAndroid && typeof window.DenkiAndroid.saveJson === 'function'")))throw new AssertionError("Native save bridge missing");
+            passed("native save bridge is exposed");
+            if(!"true".equals(js("!navigator.serviceWorker.controller")))throw new AssertionError("Unexpected service worker in native build");
+            passed("native build has no controlling service worker");
             js("document.querySelector('.welcome .btn.primary').click()");
             waitFor("!!document.querySelector('.bottom-nav')");
             passed("start company and render game");
