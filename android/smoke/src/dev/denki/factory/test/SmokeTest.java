@@ -35,6 +35,19 @@ public final class SmokeTest extends Instrumentation {
     private void clickText(String text) throws Exception {
         js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).click()");
     }
+    private ActivityMonitor watchPicker(String action) throws Exception {
+        // An action-only filter does not match an intent with a MIME type and
+        // CATEGORY_OPENABLE, even when DocumentsUI actually opens correctly.
+        IntentFilter filter=new IntentFilter(action);
+        filter.addCategory(Intent.CATEGORY_OPENABLE);
+        filter.addDataType("application/json");
+        return addMonitor(filter,null,false);
+    }
+    private void waitForPicker(ActivityMonitor monitor, String label) throws Exception {
+        long deadline=SystemClock.uptimeMillis()+15000;
+        while(monitor.getHits()<1 && SystemClock.uptimeMillis()<deadline) Thread.sleep(100);
+        if(monitor.getHits()<1) throw new AssertionError("Android "+label+" picker was not launched");
+    }
     private void touchText(String text) throws Exception {
         js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'})");
         JSONObject rect = new JSONObject(js("(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"'));const r=b.getBoundingClientRect();return {x:(r.left+r.width/2)*devicePixelRatio,y:(r.top+r.height/2)*devicePixelRatio};})()"));
@@ -84,18 +97,18 @@ public final class SmokeTest extends Instrumentation {
             js("document.querySelector('[aria-label=ตั้งค่า]').click()");
             waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('มุมเล็ก')");
             clickText("บันทึกและสำรอง");waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('เก็บกิจการ')");
-            ActivityMonitor exportMonitor=addMonitor(new IntentFilter(Intent.ACTION_CREATE_DOCUMENT),null,false);
-            clickText("ส่งออกไฟล์สำรอง");
-            Thread.sleep(2500);
-            if(exportMonitor.getHits()<1)throw new AssertionError("Android export picker was not launched");
+            ActivityMonitor exportMonitor=watchPicker(Intent.ACTION_CREATE_DOCUMENT);
+            // Opening DocumentsUI pauses WebView; do not wait for a JavaScript
+            // callback which can be deferred until that activity returns.
+            runOnMainSync(() -> web.evaluateJavascript("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('ส่งออกไฟล์สำรอง')).click()",null));
+            waitForPicker(exportMonitor,"export");
             removeMonitor(exportMonitor);
             getUiAutomation().executeShellCommand("input keyevent 4").close();
             Thread.sleep(2000);
             waitFor("!!document.querySelector('.toast') && document.querySelector('.toast').textContent.includes('ยกเลิก')");
             passed("Android save picker opens and cancellation returns safely");
-            ActivityMonitor importMonitor=addMonitor(new IntentFilter(Intent.ACTION_OPEN_DOCUMENT),null,false);
-            touchText("นำเข้าไฟล์สำรอง");Thread.sleep(2500);
-            if(importMonitor.getHits()<1)throw new AssertionError("Android import picker was not launched");
+            ActivityMonitor importMonitor=watchPicker(Intent.ACTION_OPEN_DOCUMENT);
+            touchText("นำเข้าไฟล์สำรอง");waitForPicker(importMonitor,"import");
             removeMonitor(importMonitor);
             getUiAutomation().executeShellCommand("input keyevent 4").close();Thread.sleep(2000);
             passed("Android open-document picker returns safely");
