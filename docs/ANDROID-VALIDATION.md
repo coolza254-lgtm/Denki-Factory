@@ -2,7 +2,8 @@
 
 - PASS: unit tests 19 ข้อ และ browser tests 28 กรณี รวมเริ่มเช็กด้วยการกดเอง progress ดาวน์โหลด การส่งต่อให้ Android สิทธิ์ติดตั้ง เน็ตขาด รุ่นล่าสุด และกลับเข้าเมนู
 - PASS: native checks บน Android 15/KVM: metadata/HTTPS allowlist, APK จริงที่ลงนามด้วยกุญแจถูก/ผิด, checksum และ version, provider แบบอ่านอย่างเดียว, ขอสิทธิ์และเปิด/ยกเลิก Package Installer โดยเซฟยังอยู่ ดู [รอบที่ผ่าน](https://github.com/coolza254-lgtm/Denki-Factory/actions/runs/40009502833)
-- หลัง publish จะรัน native check ที่อ่าน metadata จาก GitHub จริงเพิ่มเติม
+- PASS: native HTTPS check อ่าน metadata จาก GitHub Release จริงหลัง publish สำเร็จ พร้อมผ่านลำดับตรวจ APK/สิทธิ์/ตัวติดตั้ง/ยกเลิกและเซฟเดิม ดู [รอบเชื่อมต่อจริงที่ผ่าน](https://github.com/coolza254-lgtm/Denki-Factory/actions/runs/40011204955)
+- ชุดทดสอบปรับให้เตรียม UiAutomation ก่อน WebView และรอการส่ง pointer/click จนครบ เพื่อแก้ความไม่สม่ำเสมอของการแตะครั้งแรกในการทดสอบ
 - UNRUN: การยืนยันติดตั้งแทนแอปจนจบ (ทดสอบเปิด/ยกเลิกตัวติดตั้ง) และ Galaxy A54 จริง
 
 # ผลตรวจ Android v0.3.0 — จักรยานปั่นไฟ
