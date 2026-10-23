@@ -42,6 +42,8 @@ public final class SmokeTest extends Instrumentation {
         throw new AssertionError("System screen not visible: "+packagePart+"; active="+lastPackage);
     }
     private void cancelInstaller() throws Exception {
+        long deadline=SystemClock.uptimeMillis()+20000;
+        while(SystemClock.uptimeMillis()<deadline) {
         AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
         boolean clicked=false;
         if(root!=null) {
@@ -55,7 +57,10 @@ public final class SmokeTest extends Instrumentation {
             }
             root.recycle();
         }
-        if(!clicked)throw new AssertionError("Android installer Cancel button was not available");
+        if(clicked)return;
+        Thread.sleep(100);
+        }
+        throw new AssertionError("Android installer Cancel button was not available");
     }
     private void fireClick(String text) {
         runOnMainSync(() -> web.evaluateJavascript("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).click()",null));
