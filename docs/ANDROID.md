@@ -1,6 +1,6 @@
 # Denki Factory — Android APK
 
-ไฟล์ติดตั้ง: [releases/denki-factory-0.3.0.apk](../releases/denki-factory-0.3.0.apk?raw=true) · application ID `dev.denki.factory` · versionCode 3 · versionName 0.3.0
+ไฟล์ติดตั้ง: [releases/denki-factory-0.4.0.apk](../releases/denki-factory-0.4.0.apk?raw=true) · application ID `dev.denki.factory` · versionCode 4 · versionName 0.4.0
 
 ## ติดตั้งบน Samsung Galaxy A54
 
@@ -16,9 +16,9 @@
 
 - Native Android Activity + Android System WebView ไม่มี dependency native ภายนอกหรือโค้ดเฉพาะ ABI จึงใช้ได้ทั้งโทรศัพท์ ARM64 และ Android จำลอง x86_64
 - HTML, JavaScript, CSS, ภาพ และฟอนต์ฝังใน APK ทั้งหมด โหลดจาก origin คงที่ `https://appassets.androidplatform.net/` ผ่านตัวอ่าน assets ภายใน ไม่ออกอินเทอร์เน็ต
-- ไม่ร้องขอสิทธิ์ Internet, พื้นที่เก็บไฟล์, รายชื่อ, กล้อง หรือการแจ้งเตือน
+- ตั้งแต่ 0.4.0 ใช้สิทธิ์ Internet เพื่อตรวจ/ดาวน์โหลดอัปเดต และ REQUEST_INSTALL_PACKAGES เพื่อเปิดหน้าติดตั้งที่ผู้ใช้ยืนยันเอง ไม่ขอสิทธิ์พื้นที่เก็บไฟล์แบบกว้าง รายชื่อ กล้อง หรือการแจ้งเตือน
 - ส่งออก/นำเข้าเซฟผ่าน Android Storage Access Framework ให้ผู้ใช้เลือกไฟล์และปลายทางเอง
-- JavaScript bridge เปิดให้บันทึก JSON เท่านั้น จำกัดขนาด 2 MB และปิดการนำทางออกไป origin ภายนอก
+- JavaScript bridge รับบันทึก JSON จำกัด 2 MB และคำสั่งตรวจ/ดาวน์โหลด/ติดตั้งอัปเดตจากแหล่งที่กำหนดในแอป ไม่รับ URL จากหน้าเกม และปิดการนำทาง WebView ไป origin ภายนอก
 - ปิด service worker ใน build Android เพราะไฟล์พร้อมใช้งานออฟไลน์จาก APK อยู่แล้ว
 - รองรับ system insets ของ Android 15, ปุ่ม Back, pause/resume และบันทึกก่อนพักแอป
 
@@ -45,7 +45,7 @@ PATH=/workspace/android-tools/java/jdk-21.0.8+9/bin:$PATH npm run build:apk
 ## การทดสอบ
 
 - ตรวจ signature schemes v2/v3 และ alignment ด้วย official Android Build Tools
-- ตรวจ manifest: min SDK 26 / target SDK 35, ไม่มี permissions เพิ่ม
+- ตรวจ manifest: min SDK 26 / target SDK 35, รุ่น 0.4.0 เพิ่ม INTERNET และ REQUEST_INSTALL_PACKAGES สำหรับระบบอัปเดต
 - ระบบเศรษฐกิจใช้ unit tests เดียวกับเว็บ
 - Android smoke checks (`npm run test:android`): ใช้เฉพาะ Android จำลองแบบทิ้งได้ สคริปต์ปฏิเสธ serial ของเครื่องจริงและล้างเซฟในเครื่องจำลองก่อนทดสอบ ติดตั้ง เปิดกิจการ นำทาง ซื้อหุ้น กู้เงิน reload แล้วเซฟยังอยู่ และเปิดตัวเลือกไฟล์
 - ไม่มีการอ้างว่าทดสอบ Samsung One UI หรือฮาร์ดแวร์ A54 จริง
@@ -61,3 +61,19 @@ PATH=/workspace/android-tools/java/jdk-21.0.8+9/bin:$PATH npm run build:apk
 ## รุ่น 0.3.0 — จักรยานปั่นไฟ
 
 แตะบนหน้าโรงไฟฟ้าเพื่อหาเงินทันทีจากจักรยาน 150 W จำกัด 4 ครั้ง/วินาที ใช้ตัวคูณเวลาเดียวกับเกมและราคาสัญญาปัจจุบัน พร้อมอนิเมชันและโหมดลดการเคลื่อนไหว ใช้เซฟเดิมได้ เพิ่ม versionCode เป็น 3 และใช้กุญแจเดิม ติดตั้งทับได้โดยไม่ต้องถอนรุ่นก่อน
+
+## รุ่น 0.4.0 — อัปเดตจากในเกม
+
+1. ติดตั้ง 0.4.0 ทับรุ่นเดิมด้วยลิงก์อีกหนึ่งครั้งก่อน (รุ่นก่อนหน้านี้ไม่มีระบบอัปเดต)
+2. ตั้งค่า → อัปเดตเกม → ตรวจสอบอัปเดต แสดงรุ่นใหม่และรายละเอียด
+3. กดดาวน์โหลด รอให้ตรวจไฟล์ แล้วกดติดตั้ง
+4. ครั้งแรก Android จะขอให้อนุญาตติดตั้งจาก Denki Factory อนุญาตแล้วกลับมากดติดตั้งอีกครั้ง
+5. ยืนยันใน Package Installer ของ Android หากยกเลิก เกมและเซฟเดิมยังอยู่
+
+ไม่มีการติดตั้งแบบเงียบหรือถอนแอป ผู้เล่นต้องยืนยันเองทุกครั้ง ไฟล์อยู่ใน cache ส่วนตัว ไม่ขอสิทธิ์จัดการไฟล์ทั้งเครื่อง ควรสำรองเซฟก่อนอัปเดตสำคัญ และต้องใช้กุญแจลงนามเดิม
+
+ตรวจ metadata จาก https://github.com/coolza254-lgtm/Denki-Factory/releases/latest/download/update.json ผ่าน HTTPS เฉพาะเมื่อกดตรวจสอบ รองรับ redirect ไป GitHub release-assets/objects เท่านั้น จำกัด metadata 64 KiB / APK 50 MiB ตรวจขนาดและ SHA-256, package ID, versionCode/versionName และ certificate ตรงกับแอปที่ติดตั้งก่อนส่ง content URI แบบอ่านอย่างเดียวให้ Android ติดตั้ง ตรวจซ้ำก่อนเปิด installer
+
+ไฟล์เว็บ/ฟอนต์ยังฝังใน APK และ WebView ยังคงบล็อกทรัพยากรนอก origin เดิม การอัปเดตทำใน Java แยกต่างหาก ไม่ส่งเซฟ ชื่อกิจการ หรือข้อมูลเกมไปที่ GitHub
+
+การเผยแพร่รุ่นถัดไป: เพิ่ม versionCode/versionName/package.json ตามเดิม, build ด้วยกุญแจเดิม, นำ APK ใส่ releases/, อัปเดต SHA256SUMS, สร้าง notes releases/vVERSION.md, รัน python3 scripts/prepare-update.py และ npm run verify:release แล้ว push/tag ตาม workflow ไม่ต้องมีเซิร์ฟเวอร์หรือ token ในแอป เมื่อ release พร้อมจะมี update.json และ APK รุ่นเดียวกันแนบอัตโนมัติ

@@ -10,6 +10,7 @@ import android.view.InputDevice;
 import android.view.accessibility.AccessibilityNodeInfo;
 import org.json.JSONObject;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import java.util.concurrent.CountDownLatch;
@@ -19,8 +20,28 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Runs only on a disposable emulator. Never run against a player's live save. */
 public final class SmokeTest extends Instrumentation {
     private WebView web;
+    private boolean liveUpdates;
     private final StringBuilder report = new StringBuilder();
-    @Override public void onCreate(Bundle args) { super.onCreate(args); start(); }
+    @Override public void onCreate(Bundle args) { super.onCreate(args);liveUpdates=args!=null && "true".equals(args.getString("liveUpdates"));start(); }
+    private void shell(String command) throws Exception {
+        try(java.io.InputStream input=new ParcelFileDescriptor.AutoCloseInputStream(getUiAutomation().executeShellCommand(command))) {
+            byte[] buffer=new byte[1024];while(input.read(buffer)!=-1) { }
+        }
+    }
+    private void waitSystem(ActivityMonitor monitor,String packagePart) throws Exception {
+        long end=SystemClock.uptimeMillis()+20000;
+        while(SystemClock.uptimeMillis()<end) {
+            AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+            boolean found=root!=null && root.getPackageName()!=null && root.getPackageName().toString().contains(packagePart);
+            if(root!=null)root.recycle();
+            if(found && (monitor==null || monitor.getHits()>0))return;
+            Thread.sleep(100);
+        }
+        throw new AssertionError("System screen not visible: "+packagePart);
+    }
+    private void fireClick(String text) {
+        runOnMainSync(() -> web.evaluateJavascript("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).click()",null));
+    }
     private String js(String script) throws Exception {
         AtomicReference<String> result = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
@@ -84,7 +105,7 @@ public final class SmokeTest extends Instrumentation {
             Activity activity=startActivitySync(intent);
             runOnMainSync(() -> web=(WebView)((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0));
             waitFor("document.readyState==='complete' && !!document.querySelector('.welcome .btn.primary')");
-            passed("embedded HTML/JS/CSS loads without Internet permission");
+            passed("embedded HTML/JS/CSS loads from offline APK assets");
             if(!"true".equals(js("!navigator.serviceWorker.controller")))throw new AssertionError("Unexpected service worker in native build");
             passed("native build has no controlling service worker");
             js("document.querySelector('.welcome .btn.primary').click()");
@@ -137,12 +158,37 @@ public final class SmokeTest extends Instrumentation {
             removeMonitor(importMonitor);
             getUiAutomation().executeShellCommand("input keyevent 4").close();Thread.sleep(2000);
             passed("Android open-document picker returns safely");
+            js("document.querySelector('[aria-label=ตั้งค่า]').click()");
+            waitFor("!!document.querySelector('.update-panel')");
+            if(liveUpdates) {
+                clickText("ตรวจสอบอัปเดต");
+                waitFor("['current','available'].includes(JSON.parse(window.DenkiAndroid.getUpdateState()).status)");
+                passed("native HTTPS check reads published GitHub update metadata successfully");
+            }
+            UpdateChecks.run(this,activity,this::passed);
+            waitFor("JSON.parse(window.DenkiAndroid.getUpdateState()).status==='ready'");
+            shell("appops set dev.denki.factory REQUEST_INSTALL_PACKAGES deny");
+            IntentFilter permissionFilter=new IntentFilter(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+            permissionFilter.addDataScheme("package");
+            ActivityMonitor permission=addMonitor(permissionFilter,null,false);
+            fireClick("ติดตั้งอัปเดต");waitSystem(permission,"settings");removeMonitor(permission);
+            shell("input keyevent 4");waitSystem(null,"dev.denki.factory");
+            passed("update permission request opens Android settings and returns safely");
+            shell("appops set dev.denki.factory REQUEST_INSTALL_PACKAGES allow");
+            IntentFilter installerFilter=new IntentFilter(Intent.ACTION_INSTALL_PACKAGE);
+            installerFilter.addDataScheme("content");installerFilter.addDataType("application/vnd.android.package-archive");
+            ActivityMonitor installer=addMonitor(installerFilter,null,false);
+            fireClick("ติดตั้งอัปเดต");waitSystem(installer,"packageinstaller");removeMonitor(installer);
+            shell("input keyevent 4");waitSystem(null,"dev.denki.factory");
+            waitFor("JSON.parse(window.DenkiAndroid.getUpdateState()).status==='ready'");
+            waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).holdings.SURY.qty===10");
+            passed("Android installer opens a signed update and cancellation preserves progress");
             js("document.querySelectorAll('.bottom-nav button')[0].click()");
             waitFor("!!document.querySelector('.home-intro')");
             if(!"true".equals(js("document.documentElement.scrollWidth<=innerWidth")))throw new AssertionError("Horizontal overflow");
             passed("phone layout has no horizontal overflow");
             result.putString("stream",report.toString()+"ANDROID_SMOKE_PASS\n");
             finish(Activity.RESULT_OK,result);
-        } catch(Throwable error){result.putString("stream",report.toString()+"ANDROID_SMOKE_FAIL: "+error+"\n");finish(Activity.RESULT_CANCELED,result);}
+        } catch(Throwable error){while(error.getCause()!=null)error=error.getCause();result.putString("stream",report.toString()+"ANDROID_SMOKE_FAIL: "+error+"\n");finish(Activity.RESULT_CANCELED,result);}
     }
 }

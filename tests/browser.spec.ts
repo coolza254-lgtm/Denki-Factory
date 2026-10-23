@@ -35,6 +35,123 @@ async function nav(page: Page, name: string) {
     .getByRole("button", { name, exact: true })
     .click();
 }
+test("updater requires a click, shows download progress, and hands installation to Android", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    let state = {
+      status: "idle",
+      message: "พร้อมตรวจสอบ",
+      currentVersion: "0.4.0",
+    };
+    const emit = (status: string, message: string) => {
+      state = { ...state, status, message };
+      window.dispatchEvent(new CustomEvent("denki-update", { detail: state }));
+    };
+    window.DenkiAndroid = {
+      saveJson: () => {},
+      getUpdateState: () => JSON.stringify(state),
+      checkForUpdate: () => {
+        document.documentElement.dataset.updateChecked = "yes";
+        emit("checking", "กำลังตรวจสอบ…");
+      },
+      downloadUpdate: () => emit("downloading", "กำลังดาวน์โหลด…"),
+      installUpdate: () =>
+        emit(
+          "permission",
+          "อนุญาตติดตั้งจาก Denki Factory แล้วกลับมากดติดตั้งอีกครั้ง",
+        ),
+    };
+  });
+  await seed(page, initialGame());
+  await page.getByRole("button", { name: "ตั้งค่า", exact: true }).click();
+  const panel = page.getByRole("region", { name: "อัปเดตเกม" });
+  await expect(panel.getByText("รุ่นที่ติดตั้ง 0.4.0")).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.updateChecked),
+  ).toBeUndefined();
+  await panel.getByRole("button", { name: "ตรวจสอบอัปเดต" }).click();
+  await expect(panel.getByRole("button")).toBeDisabled();
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent("denki-update", {
+        detail: {
+          status: "available",
+          message: "มีรุ่นใหม่",
+          version: "0.5.0",
+          bytes: 1024,
+          notes: "<script>bad()</script>",
+        },
+      }),
+    ),
+  );
+  await panel.getByRole("button", { name: "ดาวน์โหลดอัปเดต" }).click();
+  await expect(panel.getByRole("progressbar")).toBeVisible();
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent("denki-update", {
+        detail: { status: "ready", message: "ตรวจสอบแล้ว พร้อมติดตั้ง" },
+      }),
+    ),
+  );
+  await panel.getByRole("button", { name: "ติดตั้งอัปเดต" }).click();
+  await expect(panel.getByRole("status")).toContainText("อนุญาตติดตั้ง");
+  await expect(
+    panel.getByRole("button", { name: "ติดตั้งอัปเดต" }),
+  ).toBeEnabled();
+});
+test("updater handles offline errors and restores current-version state on revisiting settings", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.DenkiAndroid = {
+      saveJson: () => {},
+      getUpdateState: () =>
+        JSON.stringify({
+          status: "error",
+          message: "ตรวจสอบไม่ได้ กรุณาเช็กอินเทอร์เน็ตแล้วลองใหม่",
+        }),
+      checkForUpdate: () => {},
+    };
+  });
+  await seed(page, initialGame());
+  await page.getByRole("button", { name: "ตั้งค่า", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("เช็กอินเทอร์เน็ต");
+  await expect(
+    page.getByRole("button", { name: "ตรวจสอบอัปเดต" }),
+  ).toBeEnabled();
+  await page.evaluate(() => {
+    window.DenkiAndroid!.getUpdateState = () =>
+      JSON.stringify({
+        status: "current",
+        message: "คุณใช้รุ่นล่าสุดแล้ว",
+        currentVersion: "0.4.0",
+      });
+  });
+  await nav(page, "โรงไฟฟ้า");
+  await page.getByRole("button", { name: "ตั้งค่า", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("คุณใช้รุ่นล่าสุดแล้ว");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+test("browser updater links to the Android release without requesting install permissions", async ({
+  page,
+}) => {
+  await seed(page, initialGame());
+  await page.getByRole("button", { name: "ตั้งค่า", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "ดาวน์โหลดรุ่น Android" }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/coolza254-lgtm/Denki-Factory/releases/latest",
+  );
+  await expect(page.getByRole("button", { name: "ติดตั้งอัปเดต" })).toHaveCount(
+    0,
+  );
+});
 test("tap bike sells power, keeps progress on reload, and honors reduced motion", async ({
   page,
 }) => {

@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag, for example v0.2.0
+        description: Existing version tag, for example v0.4.0
         required: true
-        default: v0.2.0
+        default: v0.4.0
 permissions:
   contents: read
 jobs:
@@ -40,7 +40,13 @@ jobs:
         run: |
           apk="releases/denki-factory-${RELEASE_TAG#v}.apk"
           if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "$apk" releases/SHA256SUMS --clobber
+            gh release upload "$RELEASE_TAG" "$apk" releases/SHA256SUMS releases/update.json --clobber
           else
-            gh release create "$RELEASE_TAG" "$apk" releases/SHA256SUMS --verify-tag --title "Denki Factory $RELEASE_TAG" --notes-file "releases/$RELEASE_TAG.md"
+            gh release create "$RELEASE_TAG" "$apk" releases/SHA256SUMS releases/update.json --verify-tag --title "Denki Factory $RELEASE_TAG" --notes-file "releases/$RELEASE_TAG.md"
           fi
+  verify-published-updater:
+    needs: publish
+    uses: ./.github/workflows/android.yml
+    with:
+      ref: ${{ inputs.tag || github.ref_name }}
+      live_updates: true

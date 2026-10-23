@@ -1,3 +1,10 @@
+# ผลตรวจ Android v0.4.0 — อัปเดตในเกม
+
+- PASS: unit tests 19 ข้อ และ browser tests 28 กรณี รวมเริ่มเช็กด้วยการกดเอง progress ดาวน์โหลด การส่งต่อให้ Android สิทธิ์ติดตั้ง เน็ตขาด รุ่นล่าสุด และกลับเข้าเมนู
+- Native checks รอตรวจบน GitHub: metadata/HTTPS allowlist, APK จริงที่ลงนามด้วยกุญแจถูก/ผิด, checksum และ version, provider แบบอ่านอย่างเดียว, ขอสิทธิ์และเปิด/ยกเลิก Package Installer
+- หลัง publish จะรัน native check ที่อ่าน metadata จาก GitHub จริงเพิ่มเติม
+- UNRUN: การยืนยันติดตั้งแทนแอปจนจบ (ทดสอบเปิด/ยกเลิกตัวติดตั้ง) และ Galaxy A54 จริง
+
 # ผลตรวจ Android v0.3.0 — จักรยานปั่นไฟ
 
 - PASS: unit tests 19 ข้อ และ browser tests 22 กรณี รวมปั่นไฟตอนกลางคืน ยอดขาย/หน่วยพลังงาน cooldown เซฟเก่า บัญชีรายวัน และ reduced motion

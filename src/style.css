@@ -1773,3 +1773,32 @@ button {
     display: none;
   }
 }
+
+.update-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-panel progress {
+  display: block;
+  width: 100%;
+  margin: 14px 0;
+  accent-color: #5caa8d;
+}
+.update-panel details {
+  margin: 12px 0;
+}
+.update-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.update-notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.update-panel > small {
+  display: block;
+  margin-top: 12px;
+}

@@ -2,5 +2,11 @@
 
 interface Window {
   denkiHandleBack?: () => boolean;
-  DenkiAndroid?: { saveJson: (name: string, json: string) => void };
+  DenkiAndroid?: {
+    saveJson: (name: string, json: string) => void;
+    getUpdateState?: () => string;
+    checkForUpdate?: () => void;
+    downloadUpdate?: () => void;
+    installUpdate?: () => void;
+  };
 }

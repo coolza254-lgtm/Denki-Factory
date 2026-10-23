@@ -25,13 +25,14 @@ import java.util.Collections;
 import java.util.Locale;
 import org.json.JSONObject;
 
-/** Offline app shell. All resources come from APK assets; no network permissions. */
+/** Offline game shell; networking is used only by the opt-in native updater. */
 public final class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final int PICK_SAVE = 101, WRITE_SAVE = 102;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingExport;
+    private AppUpdater updater;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -63,6 +64,9 @@ public final class MainActivity extends Activity {
         settings.setTextZoom(100);
         settings.setMediaPlaybackRequiresUserGesture(true);
         web.addJavascriptInterface(new SaveFiles(), "DenkiAndroid");
+        updater=new AppUpdater(this,json -> {
+            if(web!=null)web.evaluateJavascript("window.dispatchEvent(new CustomEvent('denki-update',{detail:"+json+"}));",null);
+        });
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !isLocal(request.getUrl());
@@ -121,6 +125,10 @@ public final class MainActivity extends Activity {
     }
 
     private final class SaveFiles {
+        @JavascriptInterface public String getUpdateState() { return updater.getState(); }
+        @JavascriptInterface public void checkForUpdate() { updater.check(); }
+        @JavascriptInterface public void downloadUpdate() { updater.download(); }
+        @JavascriptInterface public void installUpdate() { updater.install(); }
         @JavascriptInterface public void saveJson(String name, String json) {
             if (json == null || json.length() > 2_000_000) return;
             try { new JSONObject(json); } catch (Exception e) { return; }
@@ -139,6 +147,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if(request==AppUpdater.INSTALL_REQUEST && updater!=null)updater.installReturned();
         if (request == PICK_SAVE && fileCallback != null) {
             fileCallback.onReceiveValue(result == RESULT_OK && data != null && data.getData() != null
                 ? new Uri[]{data.getData()} : null);
@@ -182,6 +191,7 @@ public final class MainActivity extends Activity {
         });
     }
     @Override protected void onDestroy() {
+        if(updater!=null)updater.close();
         if (fileCallback != null) { fileCallback.onReceiveValue(null); fileCallback = null; }
         if (web != null) { web.removeJavascriptInterface("DenkiAndroid"); web.destroy(); web = null; }
         super.onDestroy();

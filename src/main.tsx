@@ -43,6 +43,7 @@ import "@fontsource/noto-sans-thai-looped/thai-600.css";
 import "@fontsource/noto-sans-thai-looped/latin-400.css";
 import "./style.css";
 import { FactoryArt, SolarIcon } from "./Art";
+import { UpdatePanel } from "./UpdatePanel";
 import { RollingNumber, ActionCelebration, type Celebration } from "./Motion";
 import {
   TIERS,
@@ -1715,6 +1716,7 @@ function App() {
               />
             </label>
           </div>
+          <UpdatePanel />
           {link(
             <ShieldCheck />,
             "บันทึกและสำรอง",
@@ -1738,7 +1740,7 @@ function App() {
             </p>
           </div>
           <p className="fine center">
-            DENKI FACTORY · Prototype 0.3
+            DENKI FACTORY · Prototype 0.4
             <br />
             ออกแบบสำหรับมือถือแนวตั้ง รวม Galaxy A54
             <br />

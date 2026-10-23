@@ -12,6 +12,16 @@ on:
         ".github/workflows/android.yml",
       ]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+        default: ""
+      live_updates:
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -24,8 +34,10 @@ jobs:
         run: |
           echo "DENKI_SIGNING_DIR=$RUNNER_TEMP/denki-test-signing" >> "$GITHUB_ENV"
           echo "DENKI_APK_OUTPUT=$RUNNER_TEMP/denki-ci.apk" >> "$GITHUB_ENV"
+          echo "DENKI_LIVE_UPDATES=${{ inputs.live_updates && 'true' || 'false' }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
       - uses: actions/setup-node@v5
         with:

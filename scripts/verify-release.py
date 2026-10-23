@@ -16,6 +16,10 @@ lines = (root / 'releases/SHA256SUMS').read_text().splitlines()
 expected = next(line.split()[0] for line in lines if line.split()[-1] == artifact.name)
 actual = hashlib.sha256(artifact.read_bytes()).hexdigest()
 assert actual == expected, 'Published APK checksum mismatch'
+metadata = json.loads((root / 'releases/update.json').read_text())
+assert metadata['version'] == version
+assert metadata['versionCode'] == int(manifest.get('{http://schemas.android.com/apk/res/android}versionCode'))
+assert metadata['sha256'] == actual and metadata['bytes'] == artifact.stat().st_size
 with zipfile.ZipFile(artifact) as archive:
     assert archive.testzip() is None, 'Corrupt ZIP entry'
     names = set(archive.namelist())
