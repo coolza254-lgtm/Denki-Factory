@@ -34,5 +34,10 @@ python3 - "$build/result.txt" <<'PYRESULT'
 from pathlib import Path
 import sys
 result = Path(sys.argv[1]).read_text()
-assert 'ANDROID_SMOKE_PASS' in result and 'ANDROID_SMOKE_FAIL' not in result, 'Android smoke test did not complete successfully'
+if 'ANDROID_SMOKE_PASS' not in result or 'ANDROID_SMOKE_FAIL' in result:
+    # Surface the instrumentation report in the check's annotations as well as
+    # its log/artifact, so the failed native step is visible on the run page.
+    message = result.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+    print(f'::error title=Android instrumentation failed::{message}', flush=True)
+    raise SystemExit('Android smoke test did not complete successfully')
 PYRESULT
