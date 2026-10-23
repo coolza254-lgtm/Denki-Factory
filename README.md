@@ -2,11 +2,11 @@
 
 เกม Idle บริหารกิจการพลังงานไทยสำหรับมือถือแนวตั้ง งานภาพการ์ตูน 2D เริ่มด้วยเงินสด 0 บาท แผงโซลาร์ 400 W และแบตเตอรี่ 0.2 kWh ที่ได้รับมา ก่อนขยายไปสู่นิวเคลียร์ ผู้เล่นเป็นเจ้าของคนเดียว ไม่มีระบบจ้างพนักงาน
 
-**[ดาวน์โหลด APK 0.2.0 สำหรับ Android](releases/denki-factory-0.2.0.apk?raw=true)** · [รายละเอียดรุ่น](releases/v0.2.0.md) · [วิธีติดตั้ง](docs/ANDROID.md)
+**[ดาวน์โหลด APK 0.2.0 สำหรับ Android](https://github.com/coolza254-lgtm/Denki-Factory/releases/download/v0.2.0/denki-factory-0.2.0.apk)** · [รายละเอียดรุ่น](releases/v0.2.0.md) · [วิธีติดตั้ง](docs/ANDROID.md)
 
 มีทั้งเว็บแอป/PWA และ APK ที่รวมไฟล์เกมไว้ในตัว ไม่มีโฆษณาหรือการซื้อในเกม ยังไม่ได้เผยแพร่ผ่าน Play Store รองรับการติดตั้งทับ 0.1.0 ด้วยกุญแจเดิมเพื่อเก็บเซฟไว้
 
-ทดสอบระบบเกมและหน้าจอจำลองแล้ว แต่ยังไม่ได้ทดสอบเล่นบน Galaxy A54 จริง และ native smoke test ใน cloud ยังติดข้อจำกัดตัวจำลอง ดู [ผลตรวจที่แยกผ่าน/ยังไม่ได้ทดสอบ](docs/ANDROID-VALIDATION.md)
+ผ่าน unit tests 16 ข้อ, browser tests 20 กรณี และ native smoke test บน Android 15 emulator ใน GitHub Actions แล้ว แต่ยังไม่ได้ทดสอบเล่นบน Galaxy A54 จริง ดู [ผลตรวจที่แยกผ่าน/ยังไม่ได้ทดสอบ](docs/ANDROID-VALIDATION.md)
 
 ## เริ่มพัฒนา
 

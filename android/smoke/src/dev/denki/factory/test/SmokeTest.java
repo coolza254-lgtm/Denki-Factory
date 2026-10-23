@@ -83,10 +83,8 @@ public final class SmokeTest extends Instrumentation {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             Activity activity=startActivitySync(intent);
             runOnMainSync(() -> web=(WebView)((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0));
-            waitFor("!!document.querySelector('.welcome .btn.primary')");
+            waitFor("document.readyState==='complete' && !!document.querySelector('.welcome .btn.primary')");
             passed("embedded HTML/JS/CSS loads without Internet permission");
-            if(!"true".equals(js("!!window.DenkiAndroid && typeof window.DenkiAndroid.saveJson === 'function'")))throw new AssertionError("Native save bridge missing");
-            passed("native save bridge is exposed");
             if(!"true".equals(js("!navigator.serviceWorker.controller")))throw new AssertionError("Unexpected service worker in native build");
             passed("native build has no controlling service worker");
             js("document.querySelector('.welcome .btn.primary').click()");
@@ -117,6 +115,10 @@ public final class SmokeTest extends Instrumentation {
             js("document.querySelector('[aria-label=ตั้งค่า]').click()");
             waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('มุมเล็ก')");
             clickText("บันทึกและสำรอง");waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('เก็บกิจการ')");
+            // Exercise the bridge from the save screen after a complete page
+            // load, as users do, rather than during initial WebView startup.
+            if(!"true".equals(js("!!window.DenkiAndroid && typeof window.DenkiAndroid.saveJson === 'function'")))throw new AssertionError("Native save bridge missing");
+            passed("native save bridge is exposed");
             ActivityMonitor exportMonitor=watchPicker(Intent.ACTION_CREATE_DOCUMENT);
             // Opening DocumentsUI pauses WebView; do not wait for a JavaScript
             // callback which can be deferred until that activity returns.

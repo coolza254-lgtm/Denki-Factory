@@ -5,7 +5,10 @@
 - PASS: browser tests 20 กรณีบนจอจำลองสองขนาด รวมกระแสไฟตอนผลิต/กลางคืน/ซ่อม ตัวเลขจบตรงยอดเซฟ และ reduced motion จากเกม/ระบบ
 - PASS: ตรวจ certificate ของ APK ตรงกับ 0.1.0 และ application ID เดิม เพิ่ม versionCode 1 → 2
 - UNRUN: การติดตั้งทับและเล่นบน Android/A54 จริงในรุ่น 0.2.0 ยังไม่ได้ทดสอบ
-- BLOCKED: ตัวจำลอง Android ในเครื่องนี้มีข้อจำกัด KVM/ระบบ UI ตามผลรุ่นก่อนด้านล่าง ไม่ได้นำผล browser มาอ้างแทนผล native
+- PASS: native smoke test บน Android 15 / x86_64 ใน GitHub Actions (Ubuntu 24.04 + KVM): โหลดไฟล์ฝังใน APK, bridge, ไม่มี service worker ควบคุมหน้า, เปิดกิจการ, กู้เงิน, ซื้อหุ้น, reload แล้วเซฟยังอยู่, เปิด/ยกเลิกตัวเลือกส่งออกและนำเข้า JSON และไม่มี horizontal overflow รวม 10 checkpoints ดู [รอบที่ผ่าน](https://github.com/coolza254-lgtm/Denki-Factory/actions/runs/40000655427)
+- การทดสอบ native ใช้ APK ที่ build จากซอร์สเกมเดียวกับ 0.2.0 และกุญแจทดสอบชั่วคราวของ CI ไม่ใช่กุญแจส่วนตัวของ APK ที่เผยแพร่ ไฟล์เผยแพร่ตรวจลายเซ็นและ SHA-256 แยกต่างหากแล้ว รวมดาวน์โหลดกลับจาก GitHub Release เพื่อเทียบ checksum
+- UNRUN: การส่งออกไฟล์จริงแล้วเลือกนำเข้ากลับผ่าน Android DocumentsUI จนจบ ชุด native ตรวจการเปิด/ยกเลิก picker ส่วนโครงสร้าง JSON และ import/export ในเว็บตรวจผ่าน browser tests
+- ข้อจำกัด KVM ของ cloud เครื่องนี้ยังมีตามประวัติด้านล่าง จึงย้ายการตรวจ runtime ไปยัง GitHub runner ที่มี KVM และแก้ตัวทดสอบให้รอหน้าใหม่หลัง reload, match MIME/category ของ file picker และคำนวณพิกัดแตะจาก origin ของ WebView
 
 # ผลตรวจ Android v0.1.0
 
