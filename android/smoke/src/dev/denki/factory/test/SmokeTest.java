@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.SystemClock;
 import android.view.MotionEvent;
+import android.view.InputDevice;
 import android.view.accessibility.AccessibilityNodeInfo;
 import org.json.JSONObject;
 import android.os.Bundle;
@@ -69,8 +70,11 @@ public final class SmokeTest extends Instrumentation {
         long now=SystemClock.uptimeMillis();
         MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,x,y,0);
         MotionEvent up=MotionEvent.obtain(now,now+60,MotionEvent.ACTION_UP,x,y,0);
-        getUiAutomation().injectInputEvent(down,true);getUiAutomation().injectInputEvent(up,true);
+        down.setSource(InputDevice.SOURCE_TOUCHSCREEN);up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        boolean downSent=getUiAutomation().injectInputEvent(down,true);
+        boolean upSent=getUiAutomation().injectInputEvent(up,true);
         down.recycle();up.recycle();
+        if(!downSent || !upSent) throw new AssertionError("Native touch injection was rejected");
     }
     @Override public void onStart() {
         Bundle result=new Bundle();
