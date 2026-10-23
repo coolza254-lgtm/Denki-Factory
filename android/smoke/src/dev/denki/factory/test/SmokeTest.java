@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.SystemClock;
 import android.view.MotionEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import org.json.JSONObject;
 import android.os.Bundle;
 import android.view.ViewGroup;
@@ -45,8 +46,15 @@ public final class SmokeTest extends Instrumentation {
     }
     private void waitForPicker(ActivityMonitor monitor, String label) throws Exception {
         long deadline=SystemClock.uptimeMillis()+15000;
-        while(monitor.getHits()<1 && SystemClock.uptimeMillis()<deadline) Thread.sleep(100);
-        if(monitor.getHits()<1) throw new AssertionError("Android "+label+" picker was not launched");
+        while(SystemClock.uptimeMillis()<deadline) {
+            AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+            boolean visible=root!=null && root.getPackageName()!=null
+                && root.getPackageName().toString().contains("documentsui");
+            if(root!=null) root.recycle();
+            if(monitor.getHits()>0 && visible) return;
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Android "+label+" picker did not become visible (matched intents: "+monitor.getHits()+")");
     }
     private void touchText(String text) throws Exception {
         js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'})");
