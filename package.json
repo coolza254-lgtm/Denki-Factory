@@ -1,0 +1,40 @@
+{
+  "name": "denki-factory",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "test": "tsx --test tests/*.test.ts",
+    "preview": "vite preview --host 0.0.0.0",
+    "balance": "tsx scripts/balance.ts",
+    "test:e2e": "npm run balance && playwright test",
+    "format": "prettier --write src tests scripts *.ts *.json index.html",
+    "build:android:web": "tsc -b && vite build --mode android --outDir dist-android",
+    "build:apk": "bash scripts/build-apk.sh",
+    "test:android": "bash scripts/test-android.sh",
+    "verify:release": "python3 scripts/verify-release.py"
+  },
+  "dependencies": {
+    "@fontsource/mali": "^5.1.1",
+    "@fontsource/noto-sans-thai-looped": "^5.1.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "^3.9.10",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

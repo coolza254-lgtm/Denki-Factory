@@ -1,0 +1,32 @@
+node_modules/
+dist/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+dist-android/
+android/build/
+android/app/src/main/assets/
+*.apk
+*.jks
+*.keystore
+*.p12
+*.apk.idsig
+
+# Local credentials, caches, development artifacts and personal game saves.
+.local/
+artifacts/
+.npm-cache/
+.env
+.env.*
+!.env.android
+*.pem
+*.key
+*.pfx
+*storepass*
+denki-save-*.json
+.DS_Store
+# Only intentionally published, signed APKs belong in this folder.
+!releases/*.apk
+__pycache__/
+*.py[cod]

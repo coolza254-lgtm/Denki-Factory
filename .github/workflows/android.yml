@@ -1,0 +1,55 @@
+name: Android emulator checks
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        "android/**",
+        "src/**",
+        "public/**",
+        "scripts/**",
+        "package*.json",
+        ".github/workflows/android.yml",
+      ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Use disposable signing material for tests only
+        run: |
+          echo "DENKI_SIGNING_DIR=$RUNNER_TEMP/denki-test-signing" >> "$GITHUB_ENV"
+          echo "DENKI_APK_OUTPUT=$RUNNER_TEMP/denki-ci.apk" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - run: npm ci
+      - run: npm run build:apk
+      - name: Allow the disposable runner to use KVM
+        run: sudo chmod a+rw /dev/kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: default
+          profile: pixel_7
+          disable-animations: true
+          script: npm run test:android
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-smoke-result
+          path: android/build/smoke/result.txt
