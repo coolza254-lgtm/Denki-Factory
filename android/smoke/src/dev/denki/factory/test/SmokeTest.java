@@ -42,25 +42,36 @@ public final class SmokeTest extends Instrumentation {
         throw new AssertionError("System screen not visible: "+packagePart+"; active="+lastPackage);
     }
     private void cancelInstaller() throws Exception {
-        long deadline=SystemClock.uptimeMillis()+20000;
-        while(SystemClock.uptimeMillis()<deadline) {
-        AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+        long deadline=SystemClock.uptimeMillis()+30000;
         boolean clicked=false;
-        if(root!=null) {
-            for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText("Cancel")) {
-                CharSequence text=node.getText();
-                if(text!=null && "cancel".equalsIgnoreCase(text.toString().trim()) && node.isVisibleToUser()) {
-                    clicked=node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    if(!clicked) { AccessibilityNodeInfo parent=node.getParent();if(parent!=null){clicked=parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);parent.recycle();} }
+        String last="";
+        while(SystemClock.uptimeMillis()<deadline) {
+            AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+            if(root!=null) {
+                String pkg=String.valueOf(root.getPackageName());last=pkg;
+                if(clicked && pkg.equals("dev.denki.factory")) { root.recycle();return; }
+                boolean confirmation=false;
+                for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText("Install")) {
+                    CharSequence text=node.getText();
+                    if(text!=null && "install".equalsIgnoreCase(text.toString().trim()) && node.isVisibleToUser() && node.isEnabled())confirmation=true;
+                    node.recycle();
                 }
-                node.recycle();if(clicked)break;
+                if(pkg.contains("packageinstaller") && confirmation) {
+                    for(AccessibilityNodeInfo node:root.findAccessibilityNodeInfosByText("Cancel")) {
+                        CharSequence text=node.getText();
+                        if(text!=null && "cancel".equalsIgnoreCase(text.toString().trim()) && node.isVisibleToUser() && node.isEnabled()) {
+                            boolean sent=node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                            if(!sent) { AccessibilityNodeInfo parent=node.getParent();if(parent!=null){sent=parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);parent.recycle();} }
+                            clicked|=sent;
+                        }
+                        node.recycle();
+                    }
+                }
+                root.recycle();
             }
-            root.recycle();
+            Thread.sleep(250);
         }
-        if(clicked)return;
-        Thread.sleep(100);
-        }
-        throw new AssertionError("Android installer Cancel button was not available");
+        throw new AssertionError("Android installer confirmation did not cancel; clicked="+clicked+" active="+last);
     }
     private void fireClick(String text) {
         runOnMainSync(() -> web.evaluateJavascript("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).click()",null));
