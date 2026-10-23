@@ -34,7 +34,7 @@ jobs:
         run: |
           echo "DENKI_SIGNING_DIR=$RUNNER_TEMP/denki-test-signing" >> "$GITHUB_ENV"
           echo "DENKI_APK_OUTPUT=$RUNNER_TEMP/denki-ci.apk" >> "$GITHUB_ENV"
-          echo "DENKI_LIVE_UPDATES=${{ inputs.live_updates && 'true' || 'false' }}" >> "$GITHUB_ENV"
+          echo "DENKI_LIVE_UPDATES=${{ (inputs.live_updates || github.event_name == 'push') && 'true' || 'false' }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}

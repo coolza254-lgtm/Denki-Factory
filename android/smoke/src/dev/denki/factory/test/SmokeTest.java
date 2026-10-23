@@ -79,7 +79,7 @@ public final class SmokeTest extends Instrumentation {
         throw new AssertionError("Android "+label+" picker did not become visible (matched intents: "+monitor.getHits()+")");
     }
     private void touchText(String text) throws Exception {
-        js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'});window.__denkiPointer=null;document.addEventListener('pointerdown',e=>window.__denkiPointer={text:e.target.closest('button')?.textContent||e.target.tagName,trusted:e.isTrusted},{once:true,capture:true})");
+        js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'});window.__denkiPointer=null;window.__denkiInput=[];['pointerdown','pointerup','pointercancel','click'].forEach(type=>document.addEventListener(type,e=>{const d={type,text:e.target.closest('button')?.textContent||e.target.tagName,trusted:e.isTrusted};window.__denkiInput.push(d);if(type==='pointerdown')window.__denkiPointer=d;},{once:true,capture:true}))");
         CountDownLatch painted=new CountDownLatch(1);
         runOnMainSync(() -> web.postVisualStateCallback(SystemClock.uptimeMillis(),new WebView.VisualStateCallback(){@Override public void onComplete(long id){painted.countDown();}}));
         if(!painted.await(15,TimeUnit.SECONDS))throw new AssertionError("WebView scroll did not paint");
@@ -105,6 +105,9 @@ public final class SmokeTest extends Instrumentation {
     @Override public void onStart() {
         Bundle result=new Bundle();
         try {
+            // Establish accessibility/input automation before WebView is created,
+            // rather than changing that service state in the middle of a tap.
+            getUiAutomation();
             Intent intent=new Intent(Intent.ACTION_MAIN).setClassName("dev.denki.factory","dev.denki.factory.MainActivity")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             Activity activity=startActivitySync(intent);
@@ -118,6 +121,7 @@ public final class SmokeTest extends Instrumentation {
             passed("start company and render game");
             touchText("แตะปั่นไฟ");
             if(!"true".equals(js("!!window.__denkiPointer?.trusted && window.__denkiPointer.text.includes('แตะปั่นไฟ')")))throw new AssertionError("Bike tap missed: "+js("JSON.stringify(window.__denkiPointer)"));
+            if(!"true".equals(js("Number.isFinite(JSON.parse(localStorage.getItem('denki.factory.v1')).pedalLastAt)")))throw new AssertionError("Bike tap did not commit: "+js("JSON.stringify({events:window.__denkiInput,toast:document.querySelector('.toast')?.textContent,state:JSON.parse(localStorage.getItem('denki.factory.v1')),now:Date.now()})"));
             waitFor("(()=>{const s=JSON.parse(localStorage.getItem('denki.factory.v1'));return Number.isFinite(s.pedalLastAt) && s.cash>0;})()");
             passed("touchscreen pedaling earns and saves electricity sales");
             js("document.querySelectorAll('.bottom-nav button')[1].click()");
