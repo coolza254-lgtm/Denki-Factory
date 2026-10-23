@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   initialGame,
+  capacity,
+  windSpeed,
+  SMALL_GENERATORS,
   simulateHours,
   applyAction,
   advanceTo,
@@ -249,4 +252,103 @@ test("grid investment adds book value; replacement recognizes disposal separatel
   close(s.plants[0].book, original);
   close(s.monthExpense, original * 0.4);
   assert.equal(s.ledger.find((e) => e.kind === "disposal")?.cash, 0);
+});
+
+test("small generators cost cash, preserve chapter progress, and survive old/new save validation", () => {
+  const old = initialGame("old", 0);
+  assert.ok(validateSave(JSON.parse(JSON.stringify(old))));
+  old.cash = 2000;
+  let s = applyAction(old, { type: "buySmall", equipment: "salvaged50" });
+  s = applyAction(s, { type: "buySmall", equipment: "breeze" });
+  close(s.cash, 550);
+  close(capacity(s), 0.65);
+  assert.equal(s.highest, 0);
+  assert.equal(s.plants[1].condition, 80);
+  assert.equal(s.plants[2].grid, true);
+  assert.deepEqual(projectProgress(s), projectProgress(old));
+  assert.ok(validateSave(JSON.parse(JSON.stringify(s))));
+  assert.equal(s.monthExpense, 0);
+  assert.throws(() =>
+    applyAction(initialGame(), { type: "buySmall", equipment: "breeze" }),
+  );
+  assert.throws(() =>
+    applyAction(s, { type: "buySmall", equipment: "unknown" as any }),
+  );
+  assert.ok(
+    !validateSave({
+      ...s,
+      plants: s.plants.map((p) => ({ ...p, equipment: "unknown" })),
+    }),
+  );
+});
+
+test("small wind follows the wind curve at night, respects rating, maintenance and downtime", () => {
+  let s = initialGame();
+  s.cash = 1200;
+  s = applyAction(s, { type: "buySmall", equipment: "breeze" });
+  const p = s.plants[1];
+  assert.equal(plantPower(p, s.day), 0); // installation
+  let nights = 0,
+    calm = 0;
+  for (let day = 1; day < 200; day++) {
+    const output = plantPower(p, day);
+    assert.ok(output >= 0 && output <= 0.2);
+    if (windSpeed(day) < 3) {
+      close(output, 0);
+      calm++;
+    }
+    if (output > 0) nights++;
+    assert.equal(plantPower(s.plants[0], day), 0);
+  }
+  assert.ok(nights > 0 && calm > 0);
+  p.condition = 19;
+  close(plantPower(p, 2), 0);
+  p.condition = 85;
+  p.repairUntil = 10;
+  close(plantPower(p, 2), 0);
+});
+
+test("mixed small generators reconcile finances, wear, depreciation and offline production", () => {
+  let s = initialGame("mixed", 0);
+  s.cash = 3000;
+  for (const equipment of SMALL_GENERATORS)
+    s = applyAction(s, { type: "buySmall", equipment: equipment.id });
+  const startingCash = s.cash;
+  const next = advanceTo(s, 7200000).state;
+  let repeated = s;
+  for (let min = 1; min <= 120; min++)
+    repeated = advanceTo(repeated, min * 60000).state;
+  close(next.cash, repeated.cash);
+  close(next.totalProduced, repeated.totalProduced);
+  close(next.cash, startingCash + next.revenue - next.expenses - next.tax);
+  assert.ok(next.totalSold <= next.totalProduced);
+  assert.ok(next.plants[3].produced > 0);
+  assert.ok(next.plants[3].condition < 85 && next.plants[3].book < 1200);
+  assert.ok(validateSave(next));
+});
+
+test("passive start buys a panel and wind in the first hour without a loan or tapping", () => {
+  let s = initialGame("onboarding", 0);
+  let panelAt = 0,
+    windAt = 0;
+  for (let minute = 1; minute <= 60; minute++) {
+    s = advanceTo(s, minute * 60000).state;
+    for (const m of MISSIONS)
+      if (s.totalProduced >= m.target && !s.claimed.includes(m.id))
+        s = applyAction(s, { type: "mission", id: m.id });
+    if (!panelAt && s.cash >= 250) {
+      s = applyAction(s, { type: "buySmall", equipment: "salvaged50" });
+      panelAt = minute;
+    }
+    if (!windAt && s.cash >= 1200) {
+      s = applyAction(s, { type: "buySmall", equipment: "breeze" });
+      windAt = minute;
+    }
+  }
+  assert.ok(panelAt > 0 && panelAt <= 10, `first panel: ${panelAt} minutes`);
+  assert.ok(windAt > 0 && windAt <= 60, `first wind: ${windAt} minutes`);
+  assert.equal(s.loans.length, 0);
+  assert.equal(s.pedalLastAt, undefined);
+  assert.ok(s.plants[2].produced > 0);
+  console.log(`Passive onboarding: panel ${panelAt} min; wind ${windAt} min`);
 });

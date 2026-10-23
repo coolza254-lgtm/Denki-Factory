@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { useId, useRef, type CSSProperties } from "react";
 import { useMotion } from "./Motion";
 export function FactoryArt({
   tier = 0,
@@ -6,12 +6,20 @@ export function FactoryArt({
   small = false,
   active,
   reduced = false,
+  breeze = false,
+  breezeActive = false,
+  extraPanels = 0,
+  windSpeed = 6,
 }: {
   tier?: number;
   night?: boolean;
   small?: boolean;
   active?: boolean;
   reduced?: boolean;
+  breeze?: boolean;
+  breezeActive?: boolean;
+  extraPanels?: number;
+  windSpeed?: number;
 }) {
   const id = useId();
   const element = useRef<SVGSVGElement>(null);
@@ -23,6 +31,7 @@ export function FactoryArt({
       data-producing={producing}
       className={
         "factory-art " +
+        (night ? "night " : "") +
         (small ? "small " : "") +
         (producing ? "producing " : "idle ") +
         (motion ? "motion-running" : "motion-paused")
@@ -115,6 +124,18 @@ export function FactoryArt({
           fill="#8fbd73"
           stroke="none"
         />
+        <g stroke="none">
+          <path d="M0 172q18-28 42-7 19-27 41 1l6 26H0" fill="#81b77d" />
+          <path d="M363 166q15-30 38-12 16-17 31 3v39h-69z" fill="#81b77d" />
+          <ellipse
+            cx="95"
+            cy="240"
+            rx="79"
+            ry="9"
+            fill="#78a45f"
+            opacity=".28"
+          />
+        </g>
         <path d="m276 205 135 26" stroke="#ede7c4" strokeWidth="18" />
         {tier <= 3 ? (
           <>
@@ -151,7 +172,7 @@ export function FactoryArt({
               fill="none"
             />
             <path
-              className="electric-current"
+              className="electric-current solar-wire"
               d="M171 202q34 25 88-1"
               stroke="#fff4ae"
               strokeWidth="3.5"
@@ -160,6 +181,54 @@ export function FactoryArt({
             />
           </>
         ) : null}
+        {breeze && tier < 4 && (
+          <g
+            transform="translate(219 108)"
+            className={breezeActive ? "yard-wind working" : "yard-wind resting"}
+            style={
+              {
+                "--rotor-time": `${Math.max(0.8, 14 / Math.max(1, windSpeed))}s`,
+              } as CSSProperties
+            }
+          >
+            <path d="m-3 0-5 101h15L3 0" fill="#fff6db" />
+            <path d="m-4 55 9 1m-10 25 12 1" stroke="#98b4a7" />
+            <g className="little-rotor">
+              {[0, 120, 240].map((angle) => (
+                <path
+                  key={angle}
+                  transform={`rotate(${angle})`}
+                  d="M-2-1-6-35q2-9 7-6L4-6 1 3z"
+                  fill="#fffbed"
+                />
+              ))}
+              <circle r="6" fill="#f6c853" />
+            </g>
+            <path
+              className="breeze-line"
+              d="M-47 11h20m34 28h29"
+              fill="none"
+              stroke="#d5eee4"
+            />
+            <path
+              d="M5 96q23 6 46-5"
+              fill="none"
+              stroke="#f2c956"
+              strokeWidth="3"
+            />
+          </g>
+        )}
+        {extraPanels > 0 && tier < 4 && (
+          <g transform="translate(19 227)" strokeWidth="1.5">
+            {Array.from({ length: Math.min(3, extraPanels) }, (_, i) => (
+              <g key={i} transform={`translate(${i * 39} ${(i % 2) * 3})`}>
+                <path d="m2 16 5-19 32 1-5 19z" fill="#6ca4c2" />
+                <path d="m5 7 30 1m-17-9-5 18m16-17-5 18" stroke="#c7e5de" />
+                <path d="M6 17v6m24-5v6" />
+              </g>
+            ))}
+          </g>
+        )}
         {tier === 4 ? (
           <g>
             {[75, 178, 274].map((x, i) => (
@@ -232,7 +301,10 @@ export function FactoryArt({
             <path d="M272 153h72v65h-72z" fill="#f6d47e" />
             <path d="m262 155 22-24 57 3 14 23z" fill="#e88f76" />
             <path d="M291 179h25v39h-25z" fill="#f9f2d9" />
-            <path d="M322 166h13v12h-13z" fill="#8eb6c4" />
+            <path
+              d="M322 166h13v12h-13z"
+              fill={night && producing ? "#ffe496" : "#8eb6c4"}
+            />
             <path d="m283 165-5 8h6l-3 8" fill="none" strokeWidth="2" />
           </g>
         ) : null}

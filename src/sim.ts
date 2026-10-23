@@ -17,7 +17,7 @@ export const TIERS = [
     cost: 3500,
     cf: 0.18,
     opex: 0.12,
-    years: 1.4,
+    years: 0.12,
     life: 20,
     wear: 6,
     description: "แผงเล็ก ๆ บนหลังคา จุดเริ่มต้นของทุกอย่าง",
@@ -108,6 +108,69 @@ export const TIERS = [
     color: "#b6a0e3",
   },
 ] as const;
+/** Small additions share the starter wiring; prices are game balance values. */
+export const SMALL_GENERATORS = [
+  {
+    id: "salvaged50",
+    name: "แผงมือสอง 50 W",
+    short: "แดดเล็ก ๆ",
+    kw: 0.05,
+    cost: 250,
+    cf: 0.18,
+    opex: 0.12,
+    life: 10,
+    wear: 9,
+    condition: 80,
+    color: "#4da3ea",
+    description: "แผงเก่าสภาพ 80% ต่อกับระบบเดิม ผลิตเองตอนมีแดด",
+  },
+  {
+    id: "salvaged100",
+    name: "แผงมือสอง 100 W",
+    short: "ต่อเติมแสงแดด",
+    kw: 0.1,
+    cost: 600,
+    cf: 0.18,
+    opex: 0.12,
+    life: 12,
+    wear: 8,
+    condition: 85,
+    color: "#4da3ea",
+    description: "เพิ่มพื้นที่รับแดด สภาพ 85% ไม่ต้องเริ่มโครงการใหญ่",
+  },
+  {
+    id: "breeze",
+    name: "กังหันลมมือสอง 200 W",
+    short: "สายลมหลังบ้าน",
+    kw: 0.2,
+    cost: 1200,
+    cf: 0.12,
+    opex: 0.2,
+    life: 12,
+    wear: 12,
+    condition: 85,
+    color: "#66bcb0",
+    description: "สภาพ 85% ผลิตได้ทั้งวันและคืนเมื่อมีลม ลมอ่อนจะหยุดหมุน",
+  },
+] as const;
+export type SmallGeneratorId = (typeof SMALL_GENERATORS)[number]["id"];
+export function plantSpec(p: Plant) {
+  return p.equipment
+    ? SMALL_GENERATORS.find((item) => item.id === p.equipment)!
+    : TIERS[p.tier];
+}
+/** Site wind in m/s; independent of daylight, deterministic for offline parity. */
+export function windSpeed(day: number) {
+  return Math.max(
+    0,
+    5.8 + 2.6 * Math.sin(day * 0.7) + 1.4 * Math.sin(day * 3.1),
+  );
+}
+export function smallWindFactor(day: number) {
+  const speed = windSpeed(day);
+  if (speed < 3 || speed >= 22) return 0;
+  return Math.min(1, (speed ** 3 - 3 ** 3) / (11 ** 3 - 3 ** 3));
+}
 export const STOCKS = [
   {
     id: "SURY",
@@ -143,6 +206,7 @@ export const STOCKS = [
   },
 ];
 export type Plant = {
+  equipment?: SmallGeneratorId;
   id: number;
   tier: number;
   condition: number;
@@ -307,10 +371,11 @@ export function weather(day: number) {
 }
 export function plantPower(p: Plant, day: number) {
   if (day < p.repairUntil || p.condition < 20) return 0;
-  const t = TIERS[p.tier],
+  const t = plantSpec(p),
     hour = (day % 1) * 24;
   let factor: number;
-  if (p.tier <= 3) {
+  if (p.equipment === "breeze") factor = smallWindFactor(day);
+  else if (p.tier <= 3) {
     const daylight = Math.max(0, Math.sin(((hour - 6) * Math.PI) / 12));
     factor = daylight * (t.cf * Math.PI) * weather(day).factor;
   } else if (p.tier === 4) factor = t.cf * (0.9 + 0.45 * Math.sin(day * 0.7));
@@ -349,28 +414,31 @@ export function portfolioValue(s: Game) {
   );
 }
 export function capacity(s: Game) {
-  return s.plants.reduce((sum, p) => sum + TIERS[p.tier].kw, 0);
+  return s.plants.reduce((sum, p) => sum + plantSpec(p).kw, 0);
 }
 export function totalDebt(s: Game) {
   return s.loans.reduce((v, l) => v + l.principal, 0);
 }
 export function estimatedDaily(s: Game) {
   return s.plants.reduce((a, p) => {
-    const t = TIERS[p.tier];
+    const t = plantSpec(p);
     return a + t.kw * 24 * t.cf * (0.65 + (0.35 * p.condition) / 100) * 0.84;
   }, 0);
 }
 export function repairCost(p: Plant) {
-  return Math.max(150, Math.round(TIERS[p.tier].cost * 0.004));
+  return Math.max(
+    p.equipment ? 40 : 150,
+    Math.round(plantSpec(p).cost * 0.004),
+  );
 }
 export function gridCost(p: Plant) {
-  return Math.round(TIERS[p.tier].cost * 0.035);
+  return Math.round(plantSpec(p).cost * 0.035);
 }
 export function batteryCost(p: Plant) {
-  return Math.round(Math.max(1200, TIERS[p.tier].kw * 2 * 6500));
+  return Math.round(Math.max(1200, plantSpec(p).kw * 2 * 6500));
 }
 export function projectProgress(s: Game) {
-  const p = s.plants.find((x) => x.tier === s.highest)!;
+  const p = s.plants.find((x) => x.tier === s.highest && !x.equipment)!;
   const t = TIERS[p.tier];
   const target = t.kw * 24 * t.cf * 0.78 * t.years * 365;
   return {
@@ -496,7 +564,7 @@ export function simulateHours(state: Game, hours: number): Game {
       opex = 0,
       energy = 0;
     for (const p of s.plants) {
-      const t = TIERS[p.tier];
+      const t = plantSpec(p);
       const generation = plantPower(p, mid);
       p.age += 1 / 24;
       p.condition = Math.max(0, p.condition - t.wear / 365 / 24);
@@ -585,6 +653,7 @@ export function advanceTo(
 export type Action =
   | { type: "pedal"; at: number }
   | { type: "buy"; tier: number }
+  | { type: "buySmall"; equipment: SmallGeneratorId }
   | { type: "repair" | "replace" | "grid" | "battery"; id: number }
   | { type: "grant" }
   | { type: "mission"; id: number }
@@ -601,6 +670,13 @@ export const MISSIONS = [
     desc: "ผลิตไฟฟ้าสะสม 1 kWh",
     target: 1,
     reward: 500,
+  },
+  {
+    id: 3,
+    name: "ให้สายลมช่วยทำงาน",
+    desc: "ผลิตไฟฟ้าสะสม 5 kWh",
+    target: 5,
+    reward: 1000,
   },
   {
     id: 1,
@@ -639,13 +715,35 @@ export function applyAction(state: Game, a: Action): Game {
     s.monthRevenue += income;
     // The daily operation entry posts these sales once, alongside solar sales.
     s.cash += income;
+  } else if (a.type === "buySmall") {
+    const t = SMALL_GENERATORS.find((item) => item.id === a.equipment);
+    if (!t) throw Error("ไม่พบอุปกรณ์เสริม");
+    if (s.plants.length >= 100)
+      throw Error("พื้นที่โครงการเต็มแล้ว (100 แห่ง)");
+    pay(t.cost, "ซื้อ " + t.name);
+    s.plants.push({
+      id: s.nextId++,
+      tier: 0,
+      equipment: t.id,
+      condition: t.condition,
+      age: 0,
+      createdDay: s.day,
+      produced: 0,
+      sold: 0,
+      repairUntil: s.day + 0.25,
+      grid: true,
+      battery: 0,
+      stored: 0,
+      book: t.cost,
+      cost: t.cost,
+    });
   } else if (a.type === "buy") {
     if (s.plants.length >= 100)
       throw Error("พื้นที่โครงการเต็มแล้ว (100 แห่ง)");
     if (!Number.isInteger(a.tier) || a.tier < 0 || a.tier > s.unlocked)
       throw Error("ยังไม่ปลดล็อกโครงการนี้");
     const t = TIERS[a.tier];
-    if (s.plants.some((p) => p.tier === a.tier) && a.tier > 0)
+    if (s.plants.some((p) => p.tier === a.tier && !p.equipment) && a.tier > 0)
       throw Error("มีโครงการนี้แล้ว");
     pay(t.cost, "ซื้อ " + t.name);
     s.plants.push({
@@ -673,7 +771,7 @@ export function applyAction(state: Game, a: Action): Game {
     const p = s.plants.find((x) => x.id === a.id);
     if (!p) throw Error("ไม่พบอุปกรณ์");
     if (s.day < p.repairUntil) throw Error("อุปกรณ์กำลังซ่อมหรือก่อสร้าง");
-    const t = TIERS[p.tier];
+    const t = plantSpec(p);
     if (a.type === "repair") {
       if (p.condition >= 96) throw Error("อุปกรณ์ยังอยู่ในสภาพดี");
       const c = repairCost(p);
@@ -833,6 +931,9 @@ export function validateSave(value: unknown): value is Game {
             "book",
             "cost",
           ]) &&
+          (p.equipment === undefined ||
+            (p.tier === 0 &&
+              SMALL_GENERATORS.some((item) => item.id === p.equipment))) &&
           Number.isInteger(p.tier) &&
           p.tier >= 0 &&
           p.tier < TIERS.length &&
@@ -867,7 +968,7 @@ export function validateSave(value: unknown): value is Game {
       Number.isInteger(s.unlocked) &&
       s.unlocked >= s.highest &&
       s.unlocked < 7 &&
-      s.plants.some((p) => p.tier === s.highest) &&
+      s.plants.some((p) => p.tier === s.highest && !p.equipment) &&
       typeof s.holdings === "object" &&
       s.holdings !== null &&
       !Array.isArray(s.holdings) &&

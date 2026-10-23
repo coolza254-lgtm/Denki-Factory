@@ -160,6 +160,15 @@ public final class SmokeTest extends Instrumentation {
             js("document.querySelector('.dialog .btn.primary').click()");
             waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).loans.length===1");
             passed("native localStorage and confirmed loan transaction");
+            js("document.querySelectorAll('.bottom-nav button')[0].click()");
+            waitFor("!!document.querySelector('.early-path')");
+            clickText("เพิ่มพลังงานเล็ก ๆ");waitFor("!!document.querySelector('.small-shop')");
+            touchText("ซื้อ กังหันลมมือสอง 200 W");waitFor("!!document.querySelector('.dialog')");
+            js("document.querySelector('.dialog .btn.primary').click()");
+            waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).plants.some(p=>p.equipment==='breeze')");
+            js("document.querySelectorAll('.bottom-nav button')[0].click()");
+            waitFor("!!document.querySelector('.scene-wrap .yard-wind')");
+            passed("native small wind purchase saves the equipment and adds the illustrated turbine");
             js("document.querySelectorAll('.bottom-nav button')[2].click()");waitFor("!!document.querySelector('.stock-row')");
             js("document.querySelector('.stock-row').click()");waitFor("!!document.querySelector('.stock-price')");
             clickText("ซื้อหุ้น");waitFor("!!document.querySelector('input[type=number]')");
@@ -173,7 +182,8 @@ public final class SmokeTest extends Instrumentation {
             runOnMainSync(() -> web.reload());
             waitFor("!window.__denkiSmokeBeforeReload && document.readyState==='complete' && !!document.querySelector('.bottom-nav')");
             waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).holdings.SURY.qty===10");
-            passed("saved progress survives WebView reload");
+            waitFor("JSON.parse(localStorage.getItem('denki.factory.v1')).plants.some(p=>p.equipment==='breeze')");
+            passed("saved progress and small wind equipment survive WebView reload");
             js("document.querySelector('[aria-label=ตั้งค่า]').click()");
             waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('มุมเล็ก')");
             clickText("บันทึกและสำรอง");waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('เก็บกิจการ')");

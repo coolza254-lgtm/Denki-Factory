@@ -43,10 +43,14 @@ import "@fontsource/noto-sans-thai-looped/thai-600.css";
 import "@fontsource/noto-sans-thai-looped/latin-400.css";
 import "./style.css";
 import { FactoryArt, SolarIcon } from "./Art";
+import { SmallGeneratorArt } from "./SmallGeneratorArt";
 import { UpdatePanel } from "./UpdatePanel";
 import { RollingNumber, ActionCelebration, type Celebration } from "./Motion";
 import {
   TIERS,
+  SMALL_GENERATORS,
+  plantSpec,
+  windSpeed,
   STOCKS,
   MISSIONS,
   SAVE_KEY,
@@ -337,12 +341,14 @@ function App() {
           positive: true,
         });
       } else if (
-        ["buy", "repair", "replace", "grid", "battery"].includes(a.type)
+        ["buy", "buySmall", "repair", "replace", "grid", "battery"].includes(
+          a.type,
+        )
       ) {
         setCelebration({
           id: Date.now(),
           label:
-            a.type === "buy"
+            a.type === "buy" || a.type === "buySmall"
               ? "เริ่มก่อสร้างแล้ว"
               : a.type === "repair"
                 ? "เริ่มซ่อมบำรุง"
@@ -509,7 +515,7 @@ function App() {
     );
   const s = game;
   const p = s.plants.find((p) => p.id === selected) ?? s.plants[0];
-  const t = TIERS[p.tier];
+  const t = plantSpec(p);
   const progress = projectProgress(s);
   const today = weather(s.day);
   const hour = Math.floor((s.day % 1) * 24);
@@ -522,7 +528,7 @@ function App() {
     0,
   );
   const mainProducing = s.plants.some(
-    (plant) => plant.tier === s.highest && plantPower(plant, s.day) > 0.001,
+    (plant) => plantPower(plant, s.day) > 0.001,
   );
   const rolling = (value: number, format: (n: number) => string = money) => (
     <RollingNumber value={value} format={format} reduced={s.reducedMotion} />
@@ -531,6 +537,7 @@ function App() {
   const titles: Record<string, string> = {
     equipment: "อุปกรณ์ของเรา",
     detail: t.name,
+    small: "พลังงานเล็ก ๆ",
     expand: "ขยายกิจการ",
     missions: "เป้าหมายของเรา",
     settings: "ตั้งค่า",
@@ -584,7 +591,7 @@ function App() {
     </div>
   );
   const plantCard = (item: Plant) => {
-    const def = TIERS[item.tier];
+    const def = plantSpec(item);
     return (
       <button
         className="plant-card"
@@ -595,7 +602,7 @@ function App() {
         }}
       >
         <div className="plant-icon" style={{ background: def.color + "45" }}>
-          <Icon tier={item.tier} />
+          {item.equipment === "breeze" ? <Wind /> : <Icon tier={item.tier} />}
         </div>
         <div className="grow">
           <b>{def.name}</b>
@@ -622,6 +629,75 @@ function App() {
       </button>
     );
   };
+  const smallShop = (
+    <>
+      {header(
+        "A LITTLE MORE POWER",
+        "ให้แดดกับลมช่วยทำงาน",
+        "ต่อกับระบบเดิม · ซื้อซ้ำได้ · ไม่มีค่าเชื้อเพลิง",
+      )}
+      <div className="small-shop">
+        {SMALL_GENERATORS.map((item) => {
+          const owned = s.plants.filter((p) => p.equipment === item.id).length;
+          return (
+            <article className="generator-card" key={item.id}>
+              <div
+                className={
+                  "generator-picture " + (item.id === "breeze" ? "mint" : "sky")
+                }
+              >
+                <span className="paper-label">
+                  {item.id === "breeze" ? "ลมมา ไฟมา" : "แดดออก ทำงานเอง"}
+                </span>
+                <SmallGeneratorArt
+                  wind={item.id === "breeze"}
+                  active={item.id === "breeze" ? windSpeed(s.day) >= 3 : !night}
+                  speed={windSpeed(s.day)}
+                  reduced={s.reducedMotion}
+                />
+                <span className="capacity-sticker">{item.kw * 1000} W</span>
+              </div>
+              <div className="generator-copy">
+                <span className="eyebrow">
+                  {owned ? `มีแล้ว ${owned} ชุด` : "เริ่มเล็ก เติบโตได้"}
+                </span>
+                <h3>{item.name}</h3>
+                <p>{item.description}</p>
+                <div className="line-item">
+                  <span>พร้อมใช้ใน 1 นาทีจริง</span>
+                  <b>{money(item.cost)}</b>
+                </div>
+                <button
+                  className="btn primary full"
+                  disabled={s.cash < item.cost || s.plants.length >= 100}
+                  onClick={() =>
+                    ask(
+                      "ซื้อ " + item.name,
+                      "ต่อกับระบบเดิม ใช้เวลา 6 ชั่วโมงเกม มีค่าบำรุงรักษาและค่าเสื่อม " +
+                        (item.id === "breeze"
+                          ? "กำลัง 200 W เป็นพิกัดสูงสุด ลมต่ำกว่า 3 m/s หรือแรงตั้งแต่ 22 m/s จะหยุดผลิต"
+                          : "ผลิตตอนมีแดด แผงมือสองเริ่มด้วยสภาพต่ำกว่าแผงใหม่"),
+                      { type: "buySmall", equipment: item.id },
+                      item.cost,
+                    )
+                  }
+                >
+                  {s.cash < item.cost
+                    ? "เงินไม่พอ · ขาด " + money(item.cost - s.cash)
+                    : "ซื้อ " + item.name}
+                  <Plus size={16} />
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <p className="fine">
+        อุปกรณ์เสริมช่วยเพิ่มรายได้และรางวัลพลังงาน
+        เป้าหมายโครงการใหญ่ใช้ประสบการณ์และการผลิตของโครงการหลัก
+      </p>
+    </>
+  );
   const projectView = (
     <>
       <div className="project-hero">
@@ -641,7 +717,11 @@ function App() {
           <div className="panel">
             <h3>เงื่อนไขทุนเปลี่ยนผ่าน</h3>
             <Progress
-              label={"ประสบการณ์ " + num(TIERS[s.highest].years) + " ปีธุรกิจ"}
+              label={
+                s.highest === 0
+                  ? "ทดลองเดินระบบ 44 วันธุรกิจ (~3 ชั่วโมงจริง)"
+                  : "ประสบการณ์ " + num(TIERS[s.highest].years) + " ปีธุรกิจ"
+              }
               value={progress.time}
             />
             <Progress
@@ -738,6 +818,7 @@ function App() {
     </>
   );
   function renderPage() {
+    if (page === "small") return smallShop;
     if (page === "equipment")
       return (
         <>
@@ -759,12 +840,23 @@ function App() {
       return (
         <>
           {header("PLANT DETAILS", t.name)}
-          <FactoryArt
-            tier={p.tier}
-            night={night}
-            active={plantPower(p, s.day) > 0.001}
-            reduced={s.reducedMotion}
-          />
+          {p.equipment ? (
+            <div className="equipment-illustration">
+              <SmallGeneratorArt
+                wind={p.equipment === "breeze"}
+                active={plantPower(p, s.day) > 0.001}
+                speed={windSpeed(s.day)}
+                reduced={s.reducedMotion}
+              />
+            </div>
+          ) : (
+            <FactoryArt
+              tier={p.tier}
+              night={night}
+              active={plantPower(p, s.day) > 0.001}
+              reduced={s.reducedMotion}
+            />
+          )}
           <div className="stats three">
             {stat("กำลังติดตั้ง", power(t.kw))}
             {stat("สภาพ", num(p.condition) + "%")}
@@ -781,6 +873,16 @@ function App() {
                     : "กำลังเดินระบบ"}
               </b>
             </div>
+            <div className="line-item">
+              <span>กำลังผลิตตอนนี้</span>
+              <b>{power(plantPower(p, s.day))}</b>
+            </div>
+            {p.equipment === "breeze" && (
+              <div className="line-item">
+                <span>ลมบริเวณนี้</span>
+                <b>{num(windSpeed(s.day))} m/s</b>
+              </div>
+            )}
             <div className="line-item">
               <span>ผลิตสะสม</span>
               <b>{energy(p.produced)}</b>
@@ -894,6 +996,14 @@ function App() {
             "ก้าวเล็ก ๆ ที่ใหญ่ขึ้น",
             "ซื้อเมื่อพร้อม เหลือเงินไว้ดูแลเครื่องด้วยนะ",
           )}
+          <button className="small-shop-link" onClick={() => setPage("small")}>
+            <Wind />
+            <span>
+              <b>พลังงานเล็ก ๆ เริ่ม ฿250</b>
+              <small>แผงมือสองและกังหันลมสำหรับหลังบ้าน</small>
+            </span>
+            <ChevronRight />
+          </button>
           {TIERS.map((tier, i) => {
             const owned = s.plants.some((p) => p.tier === i);
             const locked = i > s.unlocked;
@@ -1573,7 +1683,7 @@ function App() {
             .filter((p) => s.day < p.repairUntil)
             .map((p) => (
               <div className="panel" key={p.id}>
-                <h3>{TIERS[p.tier].name}</h3>
+                <h3>{plantSpec(p).name}</h3>
                 <p>
                   กำลังเตรียมระบบ / ซ่อม อีก {num(p.repairUntil - s.day)} วันเกม
                 </p>
@@ -1605,7 +1715,11 @@ function App() {
           {[
             [
               "เริ่มยังไงดี?",
-              "แผงแรกผลิตเองตามเวลา รอสะสม 1 kWh แล้วรับทุนแรกในหน้าเป้าหมาย เพิ่มแผงหรือขยายสายส่งตามงบ เก็บเงินสำรองไว้ซ่อมเสมอ",
+              "แผงแรกผลิตเองตามเวลา หรือแตะปั่นไฟช่วยได้ ผลิตครบ 1 kWh รับทุน ฿500 ซื้อแผงมือสองเริ่ม ฿250 จากนั้นผลิตครบ 5 kWh รับทุน ฿1,000 เก็บซื้อกังหันลม ฿1,200 ไว้ช่วยผลิตตอนกลางคืน",
+            ],
+            [
+              "กังหันลมเล็กทำงานยังไง?",
+              "กำลัง 200 W เป็นพิกัด ไม่ใช่กำลังผลิตตลอดเวลา ผลิตตามความเร็วลมทั้งกลางวันและกลางคืน เริ่มที่ 3 m/s ถึงพิกัดที่ 11 m/s และหยุดป้องกันลมแรงตั้งแต่ 22 m/s ค่าแรงลมในเกมเป็นแบบจำลอง ไม่ใช่พยากรณ์อากาศจริง",
             ],
             [
               "กำลังกับพลังงาน",
@@ -1838,7 +1952,8 @@ function App() {
                         A LITTLE SUNSHINE, A BIG DREAM
                       </span>
                       <h1>
-                        วันนี้ แดดเป็นใจ<span className="hand-dot">.</span>
+                        {night ? "คืนนี้ ให้ลมช่วยดูแล" : "วันนี้ แดดเป็นใจ"}
+                        <span className="hand-dot">.</span>
                       </h1>
                     </div>
                     <span className="weather">
@@ -1869,6 +1984,18 @@ function App() {
                       tier={s.highest}
                       night={night}
                       active={mainProducing}
+                      breeze={s.plants.some((p) => p.equipment === "breeze")}
+                      breezeActive={s.plants.some(
+                        (p) =>
+                          p.equipment === "breeze" &&
+                          plantPower(p, s.day) > 0.001,
+                      )}
+                      extraPanels={
+                        s.plants.filter(
+                          (p) => p.equipment && p.equipment !== "breeze",
+                        ).length
+                      }
+                      windSpeed={windSpeed(s.day)}
                       reduced={s.reducedMotion}
                     />
                     <span className="scene-caption">
@@ -1887,6 +2014,43 @@ function App() {
                       <Plus size={18} />
                     </button>
                   </div>
+                  <div className="weather-notes">
+                    <span>
+                      <Wind size={15} /> ลม {num(windSpeed(s.day))} m/s
+                    </span>
+                    <span>
+                      {night
+                        ? "โซลาร์พัก · ลมยังผลิตได้"
+                        : "แดดและลม ทำงานตามธรรมชาติ"}
+                    </span>
+                  </div>
+                  {s.highest === 0 && (
+                    <section
+                      className="early-path"
+                      aria-label="เริ่มต้นพลังงานสะอาด"
+                    >
+                      <span className="eyebrow">SMALL STEPS, STEADY POWER</span>
+                      <h3>มีตัวช่วยแล้ว ไม่ต้องปั่นอย่างเดียว</h3>
+                      <p>แผงมือสองเริ่ม ฿250 · กังหันลม ฿1,200</p>
+                      <div className="early-actions">
+                        <button
+                          className="btn primary"
+                          onClick={() => setPage("small")}
+                        >
+                          <Wind size={17} /> เพิ่มพลังงานเล็ก ๆ
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={() => setPage("missions")}
+                        >
+                          <Flag size={17} />{" "}
+                          {unclaimed
+                            ? `รับทุน ${unclaimed} รายการ`
+                            : "ดูทุนเริ่มต้น"}
+                        </button>
+                      </div>
+                    </section>
+                  )}
                   <section className="pedal-card" aria-label="จักรยานปั่นไฟ">
                     <div className="pedal-heading">
                       <b>พลังจากสองขา</b>
@@ -1995,7 +2159,9 @@ function App() {
                       <Sun size={18} />
                       <span>
                         แผงแรกทำงานเอง · ผลิตครบ 1 kWh รับทุน ฿500
-                        <small>ใช้เวลาประมาณ 2–5 นาทีจริง แล้วแต่ช่วงแดด</small>
+                        <small>
+                          แตะรับทุนในหน้าเป้าหมาย แล้วซื้อแผงมือสอง ฿250
+                        </small>
                       </span>
                       <ChevronRight size={15} />
                     </button>

@@ -308,9 +308,7 @@ test("mission pays once, purchase confirmed, back navigation works", async ({
     )
     .toBe(2);
   await page.goBack();
-  await expect(
-    page.getByRole("heading", { name: "วันนี้ แดดเป็นใจ." }),
-  ).toBeVisible();
+  await expect(page.locator(".home-intro h1")).toBeVisible();
 });
 test("business pages, policies, city, and investment subpages are reachable", async ({
   page,
@@ -533,4 +531,70 @@ test("system reduced-motion preference is respected and reward feedback does not
       .locator(".money-bar .rolling-number")
       .getAttribute("aria-label")) ?? "",
   );
+});
+
+test("small wind shop purchases persist, production is visible at night, and motion can stop", async ({
+  page,
+}, info) => {
+  const state = initialGame();
+  state.cash = 1500;
+  state.day = 2;
+  await seed(page, state);
+  await page.getByRole("button", { name: "เพิ่มพลังงานเล็ก ๆ" }).click();
+  await expect(
+    page.getByRole("heading", { name: "ให้แดดกับลมช่วยทำงาน" }),
+  ).toBeVisible();
+  const purchase = page.getByRole("button", {
+    name: "ซื้อ กังหันลมมือสอง 200 W",
+    exact: true,
+  });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-small-shop-preview.png`,
+    fullPage: true,
+  });
+  await purchase.click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "ยืนยัน", exact: true })
+    .click();
+  await expect(page.getByText("มีแล้ว 1 ชุด", { exact: true })).toBeVisible();
+  await expect(purchase).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/${info.project.name}-small-shop.png`,
+    fullPage: true,
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: /กังหันลมมือสอง 200 W/ }),
+  ).toBeVisible();
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    SAVE_KEY,
+  );
+  expect(saved.plants[1].equipment).toBe("breeze");
+  saved.day = 3;
+  saved.plants[1].repairUntil = 0;
+  await seed(page, saved);
+  const rotor = page.locator(".scene-wrap .yard-wind .little-rotor");
+  await expect(page.locator(".scene-wrap .factory-art")).toHaveAttribute(
+    "data-producing",
+    "true",
+  );
+  await expect(rotor).toHaveCSS("animation-play-state", "running");
+  await page.screenshot({
+    path: `test-results/${info.project.name}-wind-night.png`,
+    fullPage: true,
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(rotor).toHaveCSS("animation-play-state", "paused");
+  await page.getByRole("button", { name: /กังหันลมมือสอง 200 W/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "กังหันลมมือสอง 200 W", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("ลมบริเวณนี้")).toBeVisible();
 });

@@ -1,6 +1,6 @@
 # Denki Factory — Android APK
 
-ไฟล์ติดตั้ง: [releases/denki-factory-0.4.0.apk](../releases/denki-factory-0.4.0.apk?raw=true) · application ID `dev.denki.factory` · versionCode 4 · versionName 0.4.0
+ไฟล์ติดตั้ง: [releases/denki-factory-0.5.0.apk](../releases/denki-factory-0.5.0.apk?raw=true) · application ID `dev.denki.factory` · versionCode 5 · versionName 0.5.0
 
 ## ติดตั้งบน Samsung Galaxy A54
 
