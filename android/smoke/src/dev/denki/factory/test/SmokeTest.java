@@ -41,6 +41,13 @@ public final class SmokeTest extends Instrumentation {
         }
         throw new AssertionError("System screen not visible: "+packagePart+"; active="+lastPackage);
     }
+    private String systemText(AccessibilityNodeInfo node,int depth) {
+        if(node==null || depth>7)return "";
+        StringBuilder value=new StringBuilder();
+        if(node.getText()!=null)value.append("[").append(node.getText()).append(" enabled=").append(node.isEnabled()).append("]");
+        for(int i=0;i<node.getChildCount();i++) { AccessibilityNodeInfo child=node.getChild(i);value.append(systemText(child,depth+1));if(child!=null)child.recycle(); }
+        return value.toString();
+    }
     private void cancelInstaller() throws Exception {
         long deadline=SystemClock.uptimeMillis()+30000;
         boolean clicked=false;
@@ -48,7 +55,7 @@ public final class SmokeTest extends Instrumentation {
         while(SystemClock.uptimeMillis()<deadline) {
             AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
             if(root!=null) {
-                String pkg=String.valueOf(root.getPackageName());last=pkg;
+                String pkg=String.valueOf(root.getPackageName());last=pkg+" "+systemText(root,0);
                 if(clicked && pkg.equals("dev.denki.factory")) { root.recycle();return; }
                 boolean confirmation=false;
                 for(String label:new String[]{"Install","Update"}) {
