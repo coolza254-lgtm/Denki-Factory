@@ -90,6 +90,9 @@ public final class SmokeTest extends Instrumentation {
             js("document.querySelector('.welcome .btn.primary').click()");
             waitFor("!!document.querySelector('.bottom-nav')");
             passed("start company and render game");
+            touchText("แตะปั่นไฟ");
+            waitFor("(()=>{const s=JSON.parse(localStorage.getItem('denki.factory.v1'));return Number.isFinite(s.pedalLastAt) && s.cash>0;})()");
+            passed("touchscreen pedaling earns and saves electricity sales");
             js("document.querySelectorAll('.bottom-nav button')[1].click()");
             waitFor("!!document.querySelector('main h2') && document.querySelector('main h2').textContent.includes('ดูแลเงิน')");
             clickText("สินเชื่อธุรกิจ");

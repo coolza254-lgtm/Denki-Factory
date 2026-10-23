@@ -51,6 +51,7 @@ import {
   SAVE_KEY,
   DAY_MS,
   GAME_DAYS_PER_REAL_DAY,
+  PEDAL_KWH,
   initialGame,
   validateSave,
   advanceTo,
@@ -149,6 +150,7 @@ function Icon({ tier }: { tier: number }) {
 }
 function App() {
   const [game, setGame] = useState<Game | null>(initial.game);
+  const [pedalPulse, setPedalPulse] = useState(0);
   const live = useRef(game);
   live.current = game;
   const [tab, setTab] = useState("plant"),
@@ -321,6 +323,12 @@ function App() {
       if (!live.current) return;
       const before = advanceTo(live.current).state;
       const updated = applyAction(before, a);
+      if (a.type === "pedal") {
+        if (updated.totalProduced === before.totalProduced) return;
+        setPedalPulse((pulse) => pulse + 1);
+        persist(updated);
+        return;
+      }
       if (a.type === "grant" || a.type === "mission") {
         setCelebration({
           id: Date.now(),
@@ -1730,7 +1738,7 @@ function App() {
             </p>
           </div>
           <p className="fine center">
-            DENKI FACTORY · Prototype 0.2
+            DENKI FACTORY · Prototype 0.3
             <br />
             ออกแบบสำหรับมือถือแนวตั้ง รวม Galaxy A54
             <br />
@@ -1877,6 +1885,97 @@ function App() {
                       <Plus size={18} />
                     </button>
                   </div>
+                  <section className="pedal-card" aria-label="จักรยานปั่นไฟ">
+                    <div className="pedal-heading">
+                      <b>พลังจากสองขา</b>
+                      <span>จักรยาน 150 W</span>
+                    </div>
+                    <button
+                      className="pedal-button"
+                      aria-label="แตะปั่นไฟขาย"
+                      onClick={() => act({ type: "pedal", at: Date.now() })}
+                    >
+                      <svg
+                        key={pedalPulse}
+                        className={
+                          pedalPulse ? "pedal-bike pedaling" : "pedal-bike"
+                        }
+                        viewBox="0 0 190 105"
+                        aria-hidden="true"
+                        fill="none"
+                        stroke="#544537"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M15 97h160" stroke="#d3dcb8" />
+                        <g
+                          className="pedal-wheel"
+                          style={{ transformOrigin: "44px 72px" }}
+                        >
+                          <circle cx="44" cy="72" r="24" fill="#fffdf3" />
+                          <path
+                            d="M44 48v48M20 72h48"
+                            stroke="#a3c8c1"
+                            strokeWidth="2"
+                          />
+                        </g>
+                        <g
+                          className="pedal-wheel"
+                          style={{ transformOrigin: "145px 72px" }}
+                        >
+                          <circle cx="145" cy="72" r="24" fill="#fffdf3" />
+                          <path
+                            d="M145 48v48M121 72h48"
+                            stroke="#a3c8c1"
+                            strokeWidth="2"
+                          />
+                        </g>
+                        <path
+                          d="m44 72 24-39 25 39H44l58-34 43 34-17-47"
+                          stroke="#5caa8d"
+                          strokeWidth="6"
+                        />
+                        <path d="M62 30h20m46-5h-13" />
+                        <g
+                          className="pedal-crank"
+                          style={{ transformOrigin: "93px 72px" }}
+                        >
+                          <circle cx="93" cy="72" r="8" fill="#f8ce66" />
+                          <path d="m84 82 18-20m-24 20h11m9-20h11" />
+                        </g>
+                        <path
+                          d="m166 26-9 14h11l-6 13"
+                          stroke="#e4a63c"
+                          strokeWidth="4"
+                        />
+                      </svg>
+                      <span className="pedal-label">
+                        แตะปั่นไฟ
+                        <small>
+                          ขายทันที +{money(PEDAL_KWH * priceAt(s, s.day), 2)} /
+                          ครั้ง
+                        </small>
+                      </span>
+                      {pedalPulse > 0 && (
+                        <span
+                          key={"reward" + pedalPulse}
+                          className="pedal-reward"
+                          aria-hidden="true"
+                        >
+                          +{money(PEDAL_KWH * priceAt(s, s.day), 2)}
+                        </span>
+                      )}
+                    </button>
+                    <p>
+                      {num(PEDAL_KWH * 1000, 2)} Wh / ครั้ง · สูงสุด 4
+                      ครั้ง/วินาที · ปั่นได้ทั้งกลางวันและกลางคืน
+                    </p>
+                    <small className="pedal-time">
+                      ใช้เวลาเร่ง ×365 เช่นเดียวกับโรงไฟฟ้า · แตะทีละครั้ง
+                      ไม่มีรายได้จากการกดค้าง
+                    </small>
+                  </section>
                   <div className="stats hero-stats">
                     {stat("กำลังผลิตตอนนี้", rolling(currentPower, power))}
                     {stat(
@@ -1885,6 +1984,7 @@ function App() {
                       "เมื่อวาน " + energy(s.yesterdayEnergy),
                     )}
                   </div>
+
                   {s.totalProduced < 1 && (
                     <button
                       className="first-tip"

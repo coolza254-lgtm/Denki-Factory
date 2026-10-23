@@ -2,6 +2,10 @@
  * Fictional grants compress a decades-long capital journey; tariffs are game values. */
 export const DAY_MS = 86_400_000;
 export const GAME_DAYS_PER_REAL_DAY = 365;
+export const PEDAL_INTERVAL_MS = 250;
+export const PEDAL_KW = 0.15;
+export const PEDAL_KWH =
+  PEDAL_KW * (PEDAL_INTERVAL_MS / 3_600_000) * GAME_DAYS_PER_REAL_DAY;
 export const OFFLINE_CAP_MS = DAY_MS;
 export const VERSION = 1;
 export const TIERS = [
@@ -213,6 +217,7 @@ export type Game = {
   nextId: number;
   notification: string;
   lastDividendQuarter: number;
+  pedalLastAt?: number;
 };
 export function initialGame(name = "แดดดี เอเนอร์จี", now = Date.now()): Game {
   return {
@@ -578,6 +583,7 @@ export function advanceTo(
   return { state: next, elapsed, capped: delta > OFFLINE_CAP_MS };
 }
 export type Action =
+  | { type: "pedal"; at: number }
   | { type: "buy"; tier: number }
   | { type: "repair" | "replace" | "grid" | "battery"; id: number }
   | { type: "grant" }
@@ -618,8 +624,24 @@ export function applyAction(state: Game, a: Action): Game {
       throw Error("เงินสดไม่พอสำหรับรายการนี้");
     post(s, label, kind, -cost, kind === "repair" ? -cost : 0);
   };
-  if (a.type === "buy") {
-    if (s.plants.length >= 100) throw Error("พื้นที่โครงการเต็มแล้ว (100 แห่ง)");
+  if (a.type === "pedal") {
+    if (!Number.isFinite(a.at) || a.at < s.startedAt)
+      throw Error("เวลาปั่นไฟไม่ถูกต้อง");
+    if (s.pedalLastAt !== undefined && a.at - s.pedalLastAt < PEDAL_INTERVAL_MS)
+      return s;
+    s.pedalLastAt = a.at;
+    const income = PEDAL_KWH * priceAt(s, s.day);
+    s.totalProduced += PEDAL_KWH;
+    s.totalSold += PEDAL_KWH;
+    s.todayEnergy += PEDAL_KWH;
+    s.todayRevenue += income;
+    s.revenue += income;
+    s.monthRevenue += income;
+    // The daily operation entry posts these sales once, alongside solar sales.
+    s.cash += income;
+  } else if (a.type === "buy") {
+    if (s.plants.length >= 100)
+      throw Error("พื้นที่โครงการเต็มแล้ว (100 แห่ง)");
     if (!Number.isInteger(a.tier) || a.tier < 0 || a.tier > s.unlocked)
       throw Error("ยังไม่ปลดล็อกโครงการนี้");
     const t = TIERS[a.tier];
@@ -788,6 +810,8 @@ export function validateSave(value: unknown): value is Game {
       keys.every((k) => Number.isFinite((obj as Record<string, unknown>)[k]));
     return (
       s.version === 1 &&
+      (s.pedalLastAt === undefined ||
+        (Number.isFinite(s.pedalLastAt) && s.pedalLastAt >= s.startedAt)) &&
       s.name.length <= 40 &&
       s.day >= 0 &&
       s.day < 365 * 1000 &&

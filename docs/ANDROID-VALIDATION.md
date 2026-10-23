@@ -1,3 +1,9 @@
+# ผลตรวจ Android v0.3.0 — จักรยานปั่นไฟ
+
+- PASS: unit tests 19 ข้อ และ browser tests 22 กรณี รวมปั่นไฟตอนกลางคืน ยอดขาย/หน่วยพลังงาน cooldown เซฟเก่า บัญชีรายวัน และ reduced motion
+- Native smoke test ของรุ่นนี้รอตรวจใน GitHub Actions โดยเพิ่มการแตะจักรยานจริงและยืนยันรายได้ในเซฟ
+- UNRUN: Galaxy A54 จริง และการส่งออก/นำเข้าเนื้อหาไฟล์ผ่าน Android DocumentsUI จนจบ
+
 # ผลตรวจ Android v0.2.0 — อนิเมชัน
 
 - PASS: build เว็บและ Android รวมทั้งตรวจ APK signature และ alignment

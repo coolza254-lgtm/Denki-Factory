@@ -25,7 +25,7 @@ default_signing="$repo_root/.local/android-signing"
 if [[ -f /workspace/android-signing/denki/personal.p12 ]]; then default_signing=/workspace/android-signing/denki; fi
 signing="${DENKI_SIGNING_DIR:-$default_signing}"
 "$tools/apksigner" sign --ks "$signing/personal.p12" --ks-key-alias denki --ks-pass "file:$signing/storepass" --out "$build/test.apk" "$build/test-aligned.apk"
-"$adb" -s "$serial" install --no-incremental --no-streaming -r "${DENKI_APK_OUTPUT:-$repo_root/artifacts/denki-factory-0.2.0.apk}"
+"$adb" -s "$serial" install --no-incremental --no-streaming -r "${DENKI_APK_OUTPUT:-$repo_root/artifacts/denki-factory-0.3.0.apk}"
 "$adb" -s "$serial" install --no-incremental --no-streaming -r "$build/test.apk"
 # This disposable emulator must not contain an actual player's save.
 "$adb" -s "$serial" shell pm clear dev.denki.factory

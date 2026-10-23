@@ -15,9 +15,54 @@ import {
   validateSave,
   projectProgress,
   MISSIONS,
+  PEDAL_KWH,
+  PEDAL_INTERVAL_MS,
 } from "../src/sim.ts";
 const close = (a: number, b: number, eps = 0.00001) =>
   assert.ok(Math.abs(a - b) < eps, `${a} differs from ${b}`);
+test("pedaling sells metered energy at night without changing solar output or assets", () => {
+  const start = initialGame("bike", 0);
+  start.day = 0;
+  const s = applyAction(start, { type: "pedal", at: 0 });
+  close(s.totalProduced, PEDAL_KWH);
+  close(s.totalSold, PEDAL_KWH);
+  close(s.cash, PEDAL_KWH * 3.2);
+  close(s.revenue, s.cash);
+  close(s.monthRevenue, s.cash);
+  close(s.todayRevenue, s.cash);
+  close(s.todayEnergy, PEDAL_KWH);
+  assert.deepEqual(s.plants, start.plants);
+  assert.equal(start.cash, 0);
+});
+test("pedaling rate is bounded across repeated events and restored saves", () => {
+  let s = applyAction(initialGame("bike", 0), { type: "pedal", at: 0 });
+  for (let i = 0; i < 50; i++) s = applyAction(s, { type: "pedal", at: 100 });
+  close(s.totalProduced, PEDAL_KWH);
+  s = JSON.parse(JSON.stringify(s));
+  assert.ok(validateSave(s));
+  s = applyAction(s, { type: "pedal", at: PEDAL_INTERVAL_MS });
+  close(s.totalProduced, 2 * PEDAL_KWH);
+  assert.throws(() => applyAction(s, { type: "pedal", at: NaN }));
+  assert.throws(() => applyAction(s, { type: "pedal", at: -1 }));
+  assert.ok(!validateSave({ ...s, pedalLastAt: "bad" }));
+  assert.ok(validateSave(initialGame("old save", 0)));
+});
+test("bike sales use the current tariff and reconcile once in daily cash flow", () => {
+  let s = initialGame("bike", 0);
+  s.contract = "peak";
+  s.day = 19 / 24;
+  s = applyAction(s, { type: "pedal", at: 0 });
+  close(s.cash, PEDAL_KWH * 5.2);
+  s = simulateHours(s, 24);
+  close(s.cash, s.revenue - s.expenses);
+  close(
+    s.ledger.reduce((sum, entry) => sum + entry.cash, 0) +
+      s.todayRevenue -
+      s.todayExpense,
+    s.cash,
+  );
+  close(s.totalSold, s.totalProduced - s.plants[0].produced + s.plants[0].sold);
+});
 test("starts at zero with gifted solar and small battery; no employees", () => {
   const s = initialGame("test", 0);
   assert.equal(s.cash, 0);
@@ -189,9 +234,19 @@ test("balanced attentive strategy reaches nuclear completion within 15–30 real
   );
 });
 
-test('grid investment adds book value; replacement recognizes disposal separately from cash',()=>{
- let s=initialGame();s.cash=100000;const before=s.plants[0].book;
- s=applyAction(s,{type:'grid',id:1});assert.ok(s.plants[0].book>before);assert.equal(s.monthExpense,0);
- const original=s.plants[0].cost;s.plants[0].book=original*.5;const cash=s.cash;
- s=applyAction(s,{type:'replace',id:1});close(s.cash,cash-original*.9);close(s.plants[0].book,original);close(s.monthExpense,original*.4);assert.equal(s.ledger.find(e=>e.kind==='disposal')?.cash,0);
+test("grid investment adds book value; replacement recognizes disposal separately from cash", () => {
+  let s = initialGame();
+  s.cash = 100000;
+  const before = s.plants[0].book;
+  s = applyAction(s, { type: "grid", id: 1 });
+  assert.ok(s.plants[0].book > before);
+  assert.equal(s.monthExpense, 0);
+  const original = s.plants[0].cost;
+  s.plants[0].book = original * 0.5;
+  const cash = s.cash;
+  s = applyAction(s, { type: "replace", id: 1 });
+  close(s.cash, cash - original * 0.9);
+  close(s.plants[0].book, original);
+  close(s.monthExpense, original * 0.4);
+  assert.equal(s.ledger.find((e) => e.kind === "disposal")?.cash, 0);
 });

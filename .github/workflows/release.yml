@@ -38,8 +38,9 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
           GH_REPO: ${{ github.repository }}
         run: |
+          apk="releases/denki-factory-${RELEASE_TAG#v}.apk"
           if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" releases/*.apk releases/SHA256SUMS --clobber
+            gh release upload "$RELEASE_TAG" "$apk" releases/SHA256SUMS --clobber
           else
-            gh release create "$RELEASE_TAG" releases/*.apk releases/SHA256SUMS --verify-tag --title "Denki Factory $RELEASE_TAG" --notes-file "releases/$RELEASE_TAG.md"
+            gh release create "$RELEASE_TAG" "$apk" releases/SHA256SUMS --verify-tag --title "Denki Factory $RELEASE_TAG" --notes-file "releases/$RELEASE_TAG.md"
           fi

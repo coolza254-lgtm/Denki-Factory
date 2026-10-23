@@ -1,7 +1,7 @@
 import { fixturePath } from "../scripts/fixture-path";
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { initialGame, SAVE_KEY, type Game } from "../src/sim";
+import { initialGame, SAVE_KEY, PEDAL_KWH, type Game } from "../src/sim";
 const fixture = (name: string) =>
   JSON.parse(readFileSync(fixturePath(name), "utf8")) as Game;
 const bootstrapInstalled = new WeakSet<Page>();
@@ -35,6 +35,48 @@ async function nav(page: Page, name: string) {
     .getByRole("button", { name, exact: true })
     .click();
 }
+test("tap bike sells power, keeps progress on reload, and honors reduced motion", async ({
+  page,
+}) => {
+  const state = initialGame();
+  state.day = 0;
+  await seed(page, state);
+  const bike = page.getByRole("button", { name: "แตะปั่นไฟขาย", exact: true });
+  await bike.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)!).totalProduced,
+        SAVE_KEY,
+      ),
+    )
+    .toBeCloseTo(PEDAL_KWH, 8);
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    SAVE_KEY,
+  );
+  expect(saved.cash).toBeCloseTo(PEDAL_KWH * 3.2, 8);
+  expect(saved.plants[0].produced).toBe(0);
+  await page.reload();
+  await expect(bike).toBeVisible();
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)!).pedalLastAt,
+      SAVE_KEY,
+    ),
+  ).toBe(saved.pedalLastAt);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await bike.click();
+  await expect(page.locator(".pedal-wheel").first()).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
 test("new owner can start, visit every tab, open details, and reload saved game", async ({
   page,
 }, info) => {

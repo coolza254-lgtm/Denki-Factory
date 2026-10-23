@@ -1654,3 +1654,122 @@ button {
     transition: none !important;
   }
 }
+
+.pedal-card {
+  margin: 18px 0;
+  padding: 14px;
+  border: 2px solid var(--ink, #544537);
+  border-radius: 20px 23px 18px 24px;
+  background: #fff3cf;
+}
+.pedal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+  font-family: "Mali", cursive;
+}
+.pedal-heading span {
+  font-size: 12px;
+  color: #68614f;
+}
+.pedal-button {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 5px;
+  padding: 8px;
+  border: 2px solid #8db896;
+  border-radius: 17px;
+  background: #f5fae9;
+  color: #544537;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 0 #bed2a9;
+}
+.pedal-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #bed2a9;
+}
+.pedal-button:focus-visible {
+  outline: 3px solid #d59636;
+  outline-offset: 4px;
+}
+.pedal-bike {
+  width: 45%;
+  max-width: 160px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.pedal-label {
+  text-align: left;
+  font:
+    600 19px "Mali",
+    cursive;
+}
+.pedal-label small {
+  display: block;
+  margin-top: 5px;
+  font:
+    600 12px "Noto Sans Thai Looped",
+    sans-serif;
+}
+.pedal-card p {
+  margin: 12px 0 3px;
+  font-size: 11px;
+  color: #68614f;
+}
+.pedal-time {
+  display: block;
+  font-size: 10px;
+  color: #756f62;
+}
+.pedaling .pedal-wheel,
+.pedaling .pedal-crank {
+  animation: pedal-spin 0.45s ease-out;
+}
+.pedal-reward {
+  position: absolute;
+  right: 12px;
+  top: 4px;
+  color: #327659;
+  font-weight: 600;
+  pointer-events: none;
+  animation: pedal-reward 0.65s ease-out forwards;
+}
+@keyframes pedal-spin {
+  to {
+    transform: rotate(180deg);
+  }
+}
+@keyframes pedal-reward {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+.reduced .pedal-wheel,
+.reduced .pedal-crank,
+.reduced .pedal-reward {
+  animation: none;
+}
+.reduced .pedal-reward {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pedal-wheel,
+  .pedal-crank,
+  .pedal-reward {
+    animation: none !important;
+  }
+  .pedal-reward {
+    display: none;
+  }
+}
