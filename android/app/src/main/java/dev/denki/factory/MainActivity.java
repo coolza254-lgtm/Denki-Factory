@@ -17,6 +17,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+import android.widget.FrameLayout;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -41,17 +42,22 @@ public final class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         web = new WebView(this);
+        web.setTag("denki-webview");
         web.setBackgroundColor(Color.rgb(255, 248, 232));
-        setContentView(web);
+        FrameLayout root=new FrameLayout(this);
+        root.setBackgroundColor(Color.rgb(255,248,232));
+        root.addView(web,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
         // Android 15 enforces edge-to-edge. Keep HTML outside system/cutout/IME insets.
         if (android.os.Build.VERSION.SDK_INT >= 30) {
-            web.setOnApplyWindowInsetsListener((view, insets) -> {
+            getWindow().setDecorFitsSystemWindows(false);
+            root.setOnApplyWindowInsetsListener((view, insets) -> {
                 android.graphics.Insets edges = insets.getInsets(
                     WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
                 view.setPadding(edges.left, edges.top, edges.right, edges.bottom);
                 return WindowInsets.CONSUMED;
             });
-            web.requestApplyInsets();
+            root.requestApplyInsets();
         }
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);

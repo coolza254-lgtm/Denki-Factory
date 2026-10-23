@@ -79,7 +79,10 @@ public final class SmokeTest extends Instrumentation {
         throw new AssertionError("Android "+label+" picker did not become visible (matched intents: "+monitor.getHits()+")");
     }
     private void touchText(String text) throws Exception {
-        js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'})");
+        js("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"')).scrollIntoView({block:'center'});window.__denkiPointer=null;document.addEventListener('pointerdown',e=>window.__denkiPointer={text:e.target.closest('button')?.textContent||e.target.tagName,trusted:e.isTrusted},{once:true,capture:true})");
+        CountDownLatch painted=new CountDownLatch(1);
+        runOnMainSync(() -> web.postVisualStateCallback(SystemClock.uptimeMillis(),new WebView.VisualStateCallback(){@Override public void onComplete(long id){painted.countDown();}}));
+        if(!painted.await(15,TimeUnit.SECONDS))throw new AssertionError("WebView scroll did not paint");
         JSONObject rect = new JSONObject(js("(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('"+text+"'));const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2,width:innerWidth};})()"));
         int[] geometry=new int[3];
         runOnMainSync(() -> { web.getLocationOnScreen(geometry);geometry[2]=web.getWidth(); });
@@ -90,9 +93,11 @@ public final class SmokeTest extends Instrumentation {
         float y=(float)rect.getDouble("y")*scale+geometry[1];
         long now=SystemClock.uptimeMillis();
         MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,x,y,0);
-        MotionEvent up=MotionEvent.obtain(now,now+60,MotionEvent.ACTION_UP,x,y,0);
-        down.setSource(InputDevice.SOURCE_TOUCHSCREEN);up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
         boolean downSent=getUiAutomation().injectInputEvent(down,true);
+        Thread.sleep(60);
+        MotionEvent up=MotionEvent.obtain(now,SystemClock.uptimeMillis(),MotionEvent.ACTION_UP,x,y,0);
+        up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
         boolean upSent=getUiAutomation().injectInputEvent(up,true);
         down.recycle();up.recycle();
         if(!downSent || !upSent) throw new AssertionError("Native touch injection was rejected");
@@ -103,7 +108,7 @@ public final class SmokeTest extends Instrumentation {
             Intent intent=new Intent(Intent.ACTION_MAIN).setClassName("dev.denki.factory","dev.denki.factory.MainActivity")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             Activity activity=startActivitySync(intent);
-            runOnMainSync(() -> web=(WebView)((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0));
+            runOnMainSync(() -> web=(WebView)activity.findViewById(android.R.id.content).findViewWithTag("denki-webview"));
             waitFor("document.readyState==='complete' && !!document.querySelector('.welcome .btn.primary')");
             passed("embedded HTML/JS/CSS loads from offline APK assets");
             if(!"true".equals(js("!navigator.serviceWorker.controller")))throw new AssertionError("Unexpected service worker in native build");
@@ -112,6 +117,7 @@ public final class SmokeTest extends Instrumentation {
             waitFor("!!document.querySelector('.bottom-nav')");
             passed("start company and render game");
             touchText("แตะปั่นไฟ");
+            if(!"true".equals(js("!!window.__denkiPointer?.trusted && window.__denkiPointer.text.includes('แตะปั่นไฟ')")))throw new AssertionError("Bike tap missed: "+js("JSON.stringify(window.__denkiPointer)"));
             waitFor("(()=>{const s=JSON.parse(localStorage.getItem('denki.factory.v1'));return Number.isFinite(s.pedalLastAt) && s.cash>0;})()");
             passed("touchscreen pedaling earns and saves electricity sales");
             js("document.querySelectorAll('.bottom-nav button')[1].click()");
