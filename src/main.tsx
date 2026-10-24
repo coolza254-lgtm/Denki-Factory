@@ -184,6 +184,7 @@ function App() {
   const main = useRef<HTMLElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const audio = useRef<AudioContext | null>(null);
   useEffect(() => {
     const id = setInterval(() => {
       setGame((old) => (old ? advanceTo(old).state : null));
@@ -323,6 +324,26 @@ function App() {
       setSaveError("บันทึกไม่สำเร็จ ส่งออกไฟล์สำรองเพื่อเก็บความคืบหน้า");
     }
   }
+  function playSound(kind: "tap" | "buy" | "reward") {
+    if (live.current?.reducedMotion) return;
+    try {
+      const Ctx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = audio.current ?? (audio.current = new Ctx());
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const base = kind === "reward" ? 660 : kind === "buy" ? 420 : 260;
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(base, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(base * (kind === "tap" ? 1.18 : 1.5), ctx.currentTime + 0.09);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.045, ctx.currentTime + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.17);
+    } catch { /* audio is optional */ }
+  }
   function act(a: Action) {
     try {
       if (!live.current) return;
@@ -331,10 +352,12 @@ function App() {
       if (a.type === "pedal") {
         if (updated.totalProduced === before.totalProduced) return;
         setPedalPulse((pulse) => pulse + 1);
+        playSound("tap");
         persist(updated);
         return;
       }
       if (a.type === "grant" || a.type === "mission") {
+        playSound("reward");
         setCelebration({
           id: Date.now(),
           label: "ทุน " + money(updated.cash - before.cash),
@@ -356,6 +379,7 @@ function App() {
           positive: false,
         });
       }
+      if (a.type === "buy" || a.type === "buySmall" || a.type === "cloudReinvest") playSound("buy");
       persist(updated);
       setToast("ทำรายการเรียบร้อยแล้ว");
       setModal(null);
