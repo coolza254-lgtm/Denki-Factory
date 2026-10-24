@@ -11,6 +11,8 @@
   --green: #34865f;
   --line: #e5e5d8;
   --coral: #f59579;
+  --sky: #b9e2e4;
+  --shadow-ink: #26335918;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -20,6 +22,11 @@
 }
 body {
   margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 12% 12%, #fff4bf 0 7%, transparent 24%),
+    radial-gradient(circle at 88% 86%, #cfe9d6 0 9%, transparent 27%),
+    #edf0e8;
 }
 button,
 input {
@@ -120,7 +127,7 @@ button {
   background: var(--cream);
   border: 1px solid #d4d9ce;
   border-radius: 26px;
-  box-shadow: 0 18px 60px #29334b0c;
+  box-shadow: 0 18px 60px #29334b14, 0 3px 0 #ffffffaa inset;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -177,6 +184,8 @@ button {
   width: 36px;
   height: 40px;
   transform: rotate(-5deg);
+  box-shadow: 3px 3px 0 var(--shadow-ink);
+  animation: mark-bob 4s ease-in-out infinite;
 }
 .brand > div {
   min-width: 0;
@@ -330,12 +339,16 @@ button {
 }
 .scene-wrap {
   position: relative;
+  isolation: isolate;
+  filter: drop-shadow(0 8px 0 #2633590d);
 }
 .factory-art {
   display: block;
   width: 100%;
   height: auto;
   border-radius: 16px;
+  background: linear-gradient(180deg, #bce5eb, #f8e7ad);
+  border: 1.5px solid #26335926;
 }
 .scene-caption {
   position: absolute;
@@ -370,7 +383,12 @@ button {
   background: var(--paper);
   display: grid;
   place-items: center;
+  box-shadow: 2px 2px 0 #26335924;
+  transition: transform .18s ease, background-color .18s ease;
 }
+.scene-button:hover { transform: rotate(6deg) scale(1.08); background: #fff1bc; }
+.app-header { background: linear-gradient(180deg, #fffdf7, #fff8e8cc); }
+.clock-strip { background: #e7f3df; border-top: 1px dashed #b7cda9; border-bottom: 1px dashed #b7cda9; }
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1545,6 +1563,7 @@ button {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes mark-bob { 0%,100% { transform: rotate(-5deg) translateY(0); } 50% { transform: rotate(-2deg) translateY(-2px); } }
 .action-celebration {
   position: fixed;
   z-index: 90;
