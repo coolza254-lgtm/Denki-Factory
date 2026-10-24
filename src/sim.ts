@@ -282,6 +282,7 @@ export type Game = {
   notification: string;
   lastDividendQuarter: number;
   pedalLastAt?: number;
+  cloud: { pods: number; racks: number; regions: number; reinvest: boolean; spent: number };
 };
 export function initialGame(name = "แดดดี เอเนอร์จี", now = Date.now()): Game {
   return {
@@ -351,6 +352,7 @@ export function initialGame(name = "แดดดี เอเนอร์จี"
     nextId: 2,
     notification: "ยินดีต้อนรับเจ้าของกิจการคนใหม่!",
     lastDividendQuarter: 0,
+    cloud: { pods: 0, racks: 0, regions: 0, reinvest: false, spent: 0 },
   };
 }
 const copy = (s: Game): Game => structuredClone(s);
@@ -616,6 +618,23 @@ export function simulateHours(state: Game, hours: number): Game {
       p.book -= dep;
       s.monthDep += dep;
     }
+    const cloud = (s.cloud ??= { pods: 0, racks: 0, regions: 0, reinvest: false, spent: 0 });
+    if (cloud.pods > 0 && energy > 0) {
+      const computeKwh = Math.min(energy * 0.35, cloud.pods * 0.05);
+      const cloudRevenue = computeKwh * 8;
+      revenue += cloudRevenue;
+      opex += computeKwh * 1.8;
+      if (cloud.reinvest) {
+        const budget = Math.max(0, cloudRevenue - computeKwh * 1.8);
+        const newPods = Math.min(25, Math.floor((s.cash + budget - s.reserve) / 100));
+        if (newPods > 0) {
+          cloud.pods += newPods;
+          const spent = newPods * 100;
+          cloud.spent += spent;
+          s.cash -= spent;
+        }
+      }
+    }
     s.day = Math.round((s.day + 1 / 24) * 24) / 24;
     s.totalProduced += energy;
     s.totalSold += revenue / priceAt(s, mid);
@@ -662,6 +681,7 @@ export type Action =
   | { type: "repay" }
   | { type: "contract"; value: "fixed" | "peak" }
   | { type: "policy"; auto: boolean; reserve: number }
+  | { type: "cloudReinvest"; enabled: boolean; amount?: number }
   | { type: "decommission" };
 export const MISSIONS = [
   {
@@ -876,6 +896,17 @@ export function applyAction(state: Game, a: Action): Game {
       throw Error("เงินสำรองไม่ถูกต้อง");
     s.autoRepair = a.auto;
     s.reserve = a.reserve;
+  } else if (a.type === "cloudReinvest") {
+    const cloud = (s.cloud ??= { pods: 0, racks: 0, regions: 0, reinvest: false, spent: 0 });
+    if (!cloud.pods && a.enabled) throw Error("ต้องมี Server Pod อย่างน้อย 1 เครื่องก่อน");
+    cloud.reinvest = a.enabled;
+    if (a.amount !== undefined) {
+      const count = Math.max(0, Math.floor(a.amount / 100));
+      const cost = count * 100;
+      if (count > 0) pay(cost, "ซื้อ Server Pod เพิ่ม", "capex");
+      cloud.pods += count;
+      cloud.spent += cost;
+    }
   } else if (a.type === "decommission") {
     if (s.highest < 6) throw Error("ยังไม่มีโครงการนิวเคลียร์");
     const amount = TIERS[6].cost * 0.01 - s.decommission;
@@ -895,6 +926,7 @@ export function validateSave(value: unknown): value is Game {
     for (const key of Object.keys(template) as (keyof Game)[]) {
       const v = s[key],
         ref = template[key];
+      if (key === "cloud" && v === undefined) continue;
       if (
         typeof ref === "number" &&
         (!Number.isFinite(v) || typeof v !== "number")

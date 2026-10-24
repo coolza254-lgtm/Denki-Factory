@@ -698,6 +698,26 @@ function App() {
       </p>
     </>
   );
+  const cloud = s.cloud ?? { pods: 0, racks: 0, regions: 0, reinvest: false, spent: 0 };
+  const cloudView = (
+    <>
+      {header("DENKI CLOUD", "เปลี่ยนไฟฟ้าเป็นกำลังประมวลผล", "รายได้เติบโตจาก Server Pod ที่นำกำไรกลับมาสร้างต่อ")}
+      <section className="panel cloud-panel">
+        <div className="eyebrow">CLOUD COMPUTE CLUSTER</div>
+        <h2>{cloud.pods.toLocaleString("th-TH")} Server Pod</h2>
+        <p>รายได้จากคลาวด์จะเกิดเมื่อมีไฟฟ้าส่วนเกินและลูกค้าใช้งาน</p>
+        <div className="line-item"><span>รายได้โดยประมาณ</span><b>{money(cloud.pods * 0.4)}/ชม.</b></div>
+        <div className="line-item"><span>Rack / Region</span><b>{cloud.racks} / {cloud.regions}</b></div>
+        <button className="btn primary full" disabled={s.cash < 100} onClick={() => act({ type: "cloudReinvest", enabled: cloud.reinvest, amount: 100 })}>
+          ซื้อ Server Pod ฿100 <Plus size={16} />
+        </button>
+        <button className="btn full" disabled={!cloud.pods} onClick={() => act({ type: "cloudReinvest", enabled: !cloud.reinvest })}>
+          {cloud.reinvest ? "ปิด Reinvest อัตโนมัติ" : "เปิด Reinvest อัตโนมัติ"}
+        </button>
+        <p className="fine">เมื่อเปิด Reinvest ระบบจะนำกำไรสุทธิไปซื้อ Pod เพิ่มเป็นชุด สูงสุด 25 เครื่องต่อรอบผลิต</p>
+      </section>
+    </>
+  );
   const projectView = (
     <>
       <div className="project-hero">
@@ -819,6 +839,7 @@ function App() {
   );
   function renderPage() {
     if (page === "small") return smallShop;
+    if (page === "cloud") return cloudView;
     if (page === "equipment")
       return (
         <>
@@ -2051,6 +2072,12 @@ function App() {
                       </div>
                     </section>
                   )}
+                  <section className="early-path cloud-promo" aria-label="Denki Cloud">
+                    <span className="eyebrow">DENKI CLOUD</span>
+                    <h3>{(s.cloud?.pods ?? 0).toLocaleString("th-TH")} Server Pod กำลังรอไฟ</h3>
+                    <p>แบ่งไฟส่วนเกินไปทำคลาวด์ แล้วนำกำไรกลับมาขยายแบบก้าวกระโดด</p>
+                    <button className="btn" onClick={() => setPage("cloud")}>เปิดศูนย์ Cloud <ArrowUpRight size={16} /></button>
+                  </section>
                   <section className="pedal-card" aria-label="จักรยานปั่นไฟ">
                     <div className="pedal-heading">
                       <b>พลังจากสองขา</b>
